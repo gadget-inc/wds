@@ -1,0 +1,72 @@
+{
+  "name": "wds",
+  "version": "0.21.0",
+  "author": "Harry Brundage",
+  "license": "MIT",
+  "bin": {
+    "wds": "pkg/wds.bin.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gadget-inc/wds.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "types": "pkg/index.d.ts",
+  "type": "module",
+  "main": "pkg/index.js",
+  "files": [
+    "pkg/*",
+    "Readme.md",
+    "Contributing.md",
+    "LICENSE.txt"
+  ],
+  "scripts": {
+    "build": "rm -rf pkg && tsc && chmod +x pkg/wds.bin.js pkg/wds-bench.bin.js",
+    "prepublishOnly": "pnpm run build",
+    "watch": "tsc -w",
+    "typecheck": "tsc --noEmit",
+    "lint": "pnpm run lint:prettier && pnpm run lint:eslint",
+    "lint:prettier": "NODE_OPTIONS=\"--max-old-space-size=4096\" prettier --check \"src/**/*.{js,ts,tsx}\"",
+    "lint:eslint": "NODE_OPTIONS=\"--max-old-space-size=4096\" eslint --quiet --ext ts,tsx src",
+    "lint:fix": "NODE_OPTIONS=\"--max-old-space-size=4096\" prettier --write --check \"src/**/*.{js,ts,tsx}\" && eslint --ext ts,tsx --fix src",
+    "prerelease": "gitpkg publish",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "@cspotcode/source-map-support": "^0.8.1",
+    "@swc/core": "^1.7.28",
+    "chokidar": "^3.5.3",
+    "find-root": "^1.1.0",
+    "find-yarn-workspace-root": "^2.0.0",
+    "fs-extra": "^11.2.0",
+    "globby": "^11.1.0",
+    "lodash": "^4.17.20",
+    "oxc-resolver": "^1.12.0",
+    "pkg-dir": "^5.0.0",
+    "write-file-atomic": "^6.0.0",
+    "yargs": "^16.2.0"
+  },
+  "devDependencies": {
+    "@gadgetinc/eslint-config": "^0.6.1",
+    "@gadgetinc/prettier-config": "^0.4.0",
+    "@types/find-root": "^1.1.2",
+    "@types/fs-extra": "^11.0.4",
+    "@types/lodash": "^4.14.194",
+    "@types/node": "^22.7.4",
+    "@types/write-file-atomic": "^4.0.3",
+    "@types/yargs": "^15.0.14",
+    "eslint": "^8.57.1",
+    "gitpkg": "github:airhorns/gitpkg#gitpkg-v1.0.0-beta.4-gitpkg-82083c3",
+    "prettier": "^2.8.8",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1",
+    "zx": "^7.2.3"
+  },
+  "packageManager": "pnpm@9.11.0+sha512.0a203ffaed5a3f63242cd064c8fb5892366c103e328079318f78062f24ea8c9d50bc6a47aa3567cabefd824d170e78fa2745ed1f16b132e16436146b7688f19b"
+}
