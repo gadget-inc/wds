@@ -1,0 +1,74 @@
+{
+  "name": "wds",
+  "version": "0.21.0",
+  "author": "Harry Brundage",
+  "license": "MIT",
+  "bin": {
+    "wds": "pkg/wds.bin.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gadget-inc/wds.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "types": "pkg/index.d.ts",
+  "type": "module",
+  "main": "pkg/index.js",
+  "files": [
+    "pkg/*",
+    "Readme.md",
+    "Contributing.md",
+    "LICENSE.txt"
+  ],
+  "scripts": {
+    "build": "rm -rf pkg && tsc && chmod +x pkg/wds.bin.js pkg/wds-bench.bin.js",
+    "prepublishOnly": "pnpm run build",
+    "watch": "tsc -w",
+    "typecheck": "tsc --noEmit",
+    "lint": "pnpm run lint:prettier && pnpm run lint:eslint",
+    "lint:prettier": "NODE_OPTIONS=\"--max-old-space-size=4096\" prettier --check \"src/**/*.{js,ts,tsx}\"",
+    "lint:eslint": "NODE_OPTIONS=\"--max-old-space-size=4096\" eslint --quiet --ext ts,tsx src",
+    "lint:fix": "NODE_OPTIONS=\"--max-old-space-size=4096\" prettier --write --check \"src/**/*.{js,ts,tsx}\" && eslint --ext ts,tsx --fix src",
+    "prerelease": "gitpkg publish",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "@swc/core": "^1.7.40",
+    "@swc/helpers": "^0.5.13",
+    "find-root": "^1.1.0",
+    "find-yarn-workspace-root": "^2.0.0",
+    "fs-extra": "^11.2.0",
+    "globby": "^11.1.0",
+    "lodash": "^4.17.20",
+    "oxc-resolver": "^1.12.0",
+    "node-object-hash": "^3.0.0",
+    "pkg-dir": "^5.0.0",
+    "watcher": "^2.3.1",
+    "write-file-atomic": "^6.0.0",
+    "xxhash-wasm": "^1.0.2",
+    "yargs": "^16.2.0"
+  },
+  "devDependencies": {
+    "@gadgetinc/eslint-config": "^0.6.1",
+    "@gadgetinc/prettier-config": "^0.4.0",
+    "@types/find-root": "^1.1.4",
+    "@types/fs-extra": "^11.0.4",
+    "@types/lodash": "^4.17.13",
+    "@types/node": "^22.9.0",
+    "@types/write-file-atomic": "^4.0.3",
+    "@types/yargs": "^15.0.19",
+    "eslint": "^8.57.1",
+    "gitpkg": "github:airhorns/gitpkg#gitpkg-v1.0.0-beta.4-gitpkg-82083c3",
+    "prettier": "^2.8.8",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5",
+    "zx": "^7.2.3"
+  },
+  "packageManager": "pnpm@8.12.0+sha256.553e4eb0e2a2c9abcb419b3262bdc7aee8ae3c42e2301a1807d44575786160c9"
+}
