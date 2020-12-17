@@ -4,6 +4,7 @@ import { promises as fs } from "fs";
 import { SyncIPCServer } from "node-sync-ipc";
 import os from "os";
 import path from "path";
+import pkgDir from "pkg-dir";
 import readline from "readline";
 import { Compiler } from "./Compiler";
 import { Supervisor } from "./Supervisor";
@@ -72,8 +73,9 @@ const startIPCServer = (
   return server;
 };
 
-const childProcessArgs = () => {
-  return ["-r", path.join(__dirname, "child-process-registration.js")];
+const childProcessArgs = async () => {
+  const root = await pkgDir(__dirname);
+  return ["-r", path.join(root!, "dist-src", "child-process-registration.js")];
 };
 
 export interface Options {
@@ -91,7 +93,7 @@ export const run = async (options: Options) => {
   await compiler.boot();
 
   const supervisor = new Supervisor(
-    [...childProcessArgs(), ...options.argv],
+    [...(await childProcessArgs()), ...options.argv],
     syncSocketPath
   );
 

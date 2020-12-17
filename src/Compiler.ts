@@ -85,7 +85,6 @@ export class Compiler {
       outbase: this.workspaceRoot,
       tsconfig: tsConfigFile,
       sourcemap: true,
-      metafile: "meta.json",
     });
 
     this.packageRootMap[packageRoot] = build;

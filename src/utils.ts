@@ -1,6 +1,7 @@
 const logPrefix = "[esbuild-dev]";
 export const log = {
-  debug: (...args: any[]) => console.log(logPrefix, ...args),
+  debug: (...args: any[]) =>
+    process.env["ESBUILD_DEV_DEBUG"] && console.log(logPrefix, ...args),
   info: (...args: any[]) => console.log(logPrefix, ...args),
   warn: (...args: any[]) => console.warn(logPrefix, ...args),
   error: (...args: any[]) => console.error(logPrefix, ...args),

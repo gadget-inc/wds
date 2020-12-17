@@ -10,9 +10,9 @@
     "lib": ["es2020", "DOM"],
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    "module": "commonjs",
+    "module": "ESNext",
     "target": "es2020",
     "types": ["node"],
-    "outDir": "dist"
+    "noEmit": true
   }
 }
