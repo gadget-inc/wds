@@ -1,5 +1,6 @@
 import { ChildProcess, spawn } from "child_process";
 import { EventEmitter } from "events";
+import { log } from "./utils";
 
 /** */
 export class Supervisor extends EventEmitter {
@@ -31,7 +32,6 @@ export class Supervisor extends EventEmitter {
       this.process.kill("SIGKILL");
     }
 
-    console.log(`starting process node ${this.argv.join(" ")}`);
     this.process = spawn("node", this.argv, {
       cwd: process.cwd(),
       env: {
@@ -44,7 +44,7 @@ export class Supervisor extends EventEmitter {
     this.process.on("message", (value) => this.emit("message", value));
     this.process.on("exit", (code, signal) => {
       if (signal !== "SIGKILL") {
-        console.warn(`process exited with ${code}`);
+        log.warn(`process exited with ${code}`);
       }
     });
   }

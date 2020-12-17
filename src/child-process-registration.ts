@@ -1,7 +1,6 @@
 import fs from "fs";
 import { SyncIPCClient } from "node-sync-ipc";
 
-console.warn(`starting client on ${process.env["ESBUILD_DEV_SOCKET_PATH"]}`);
 const client = new SyncIPCClient(process.env["ESBUILD_DEV_SOCKET_PATH"]);
 
 const compile = (filename: string) => {

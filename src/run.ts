@@ -1,11 +1,15 @@
 import { FSWatcher, watch } from "chokidar";
+import findWorkspaceRoot from "find-yarn-workspace-root";
+import { promises as fs } from "fs";
 import { SyncIPCServer } from "node-sync-ipc";
+import os from "os";
 import path from "path";
 import readline from "readline";
 import { Compiler } from "./Compiler";
 import { Supervisor } from "./Supervisor";
+import { log } from "./utils";
 
-const startTerminalCommandListener = (supervisor: Supervisor) => {
+const startTerminalCommandListener = (reload: () => Promise<void>) => {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -13,12 +17,17 @@ const startTerminalCommandListener = (supervisor: Supervisor) => {
   });
   rl.on("line", (line: string) => {
     if (line.trim() === "rs") {
-      supervisor.restart();
+      log.info("Restart command recieved, restarting...");
+      void reload();
     }
   });
 };
 
-const startFilesystemWatcher = (supervisor: Supervisor) => {
+const startFilesystemWatcher = (
+  workspaceRoot: string,
+  supervisor: Supervisor,
+  reload: () => Promise<void>
+) => {
   const watcher = watch([]);
 
   supervisor.on("message", (value) => {
@@ -29,7 +38,10 @@ const startFilesystemWatcher = (supervisor: Supervisor) => {
     }
   });
 
-  watcher.on("change", () => supervisor.restart());
+  watcher.on("change", (something) => {
+    log.info(`${something.replace(workspaceRoot, "")} changed, restarting...`);
+    void reload();
+  });
 
   return watcher;
 };
@@ -37,7 +49,7 @@ const startFilesystemWatcher = (supervisor: Supervisor) => {
 const startIPCServer = (
   socketPath: string,
   compiler: Compiler,
-  watcher: FSWatcher
+  watcher?: FSWatcher
 ) => {
   const server = new SyncIPCServer(socketPath);
 
@@ -48,44 +60,52 @@ const startIPCServer = (
       try {
         const compiledPath = await compiler.compile(filename);
         respond(compiledPath);
-        watcher.add(filename);
+        watcher?.add(filename);
       } catch (e) {
-        console.error(`Error compiling file ${filename}, can't continue...`);
+        log.error(`Error compiling file ${filename}, can't continue...`, e);
       }
     }
   );
+
+  server.startListen();
 
   return server;
 };
 
 const childProcessArgs = () => {
-  console.warn({ __dirname });
   return ["-r", path.join(__dirname, "child-process-registration.js")];
 };
 
 export interface Options {
   argv: string[];
-  restarts: boolean;
+  terminalCommands: boolean;
+  reloadOnChanges: boolean;
 }
 
 export const run = async (options: Options) => {
-  const compiler = new Compiler();
+  const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
+  const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "esbuild-dev"));
+  const syncSocketPath = path.join(workDir, "ipc.sock");
+
+  const compiler = new Compiler(workspaceRoot, workDir);
   await compiler.boot();
-  const syncSocketPath = path.join(compiler.workDir, "ipc.sock");
 
   const supervisor = new Supervisor(
     [...childProcessArgs(), ...options.argv],
     syncSocketPath
   );
 
-  const watcher = startFilesystemWatcher(supervisor);
+  const reload = async () => {
+    await compiler.rebuildAll();
+    supervisor.restart();
+  };
+
+  let watcher;
+  if (options.reloadOnChanges)
+    watcher = startFilesystemWatcher(workspaceRoot, supervisor, reload);
+  if (options.terminalCommands) startTerminalCommandListener(reload);
+
   const server = startIPCServer(syncSocketPath, compiler, watcher);
-
-  if (options.restarts) startTerminalCommandListener(supervisor);
-
-  // kickoff the first child process
-  supervisor.restart();
-  console.log("starting esbuild-dev ....");
 
   process.on("SIGINT", () => {
     supervisor.stop();
@@ -93,4 +113,8 @@ export const run = async (options: Options) => {
     server.stop();
     process.exit(0);
   });
+
+  // kickoff the first child process
+  log.info(`esbuild-dev starting (working in ${workDir}) ...`);
+  await reload();
 };

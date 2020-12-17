@@ -19,8 +19,9 @@
   "dependencies": {
     "chokidar": "^3.4.3",
     "esbuild": "^0.8.23",
-    "netlinkwrapper": "^2.0.2",
+    "find-yarn-workspace-root": "^2.0.0",
     "node-sync-ipc": "^3.0.2",
+    "pkg-dir": "^5.0.0",
     "yargs": "^16.2.0"
   },
   "devDependencies": {
