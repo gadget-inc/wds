@@ -7,6 +7,7 @@ import path from "path";
 import pkgDir from "pkg-dir";
 import readline from "readline";
 import { Compiler } from "./Compiler";
+import { Options } from "./Options";
 import { Supervisor } from "./Supervisor";
 import { log } from "./utils";
 
@@ -78,12 +79,6 @@ const childProcessArgs = async () => {
   return ["-r", path.join(root!, "dist-src", "child-process-registration.js")];
 };
 
-export interface Options {
-  argv: string[];
-  terminalCommands: boolean;
-  reloadOnChanges: boolean;
-}
-
 export const run = async (options: Options) => {
   const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "esbuild-dev"));
@@ -94,7 +89,8 @@ export const run = async (options: Options) => {
 
   const supervisor = new Supervisor(
     [...(await childProcessArgs()), ...options.argv],
-    syncSocketPath
+    syncSocketPath,
+    options
   );
 
   const reload = async () => {
@@ -109,14 +105,24 @@ export const run = async (options: Options) => {
 
   const server = startIPCServer(syncSocketPath, compiler, watcher);
 
-  process.on("SIGINT", () => {
+  const shutdown = (code = 0) => {
     supervisor.stop();
     compiler.stop();
     server.stop();
-    process.exit(0);
+    process.exit(code);
+  };
+
+  process.on("SIGINT", () => {
+    shutdown(0);
   });
 
   // kickoff the first child process
-  log.info(`esbuild-dev starting (working in ${workDir}) ...`);
+  options.supervise &&
+    log.info(`esbuild-dev starting (working in ${workDir}) ...`);
+
   await reload();
+
+  if (!options.supervise) {
+    supervisor.process.on("exit", (code) => shutdown(code || 0));
+  }
 };

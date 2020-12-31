@@ -1,11 +1,16 @@
 import { ChildProcess, spawn } from "child_process";
 import { EventEmitter } from "events";
+import { Options } from "./Options";
 import { log } from "./utils";
 
 /** */
 export class Supervisor extends EventEmitter {
   process!: ChildProcess;
-  constructor(readonly argv: string[], readonly socketPath: string) {
+  constructor(
+    readonly argv: string[],
+    readonly socketPath: string,
+    readonly options: Options
+  ) {
     super();
   }
 
@@ -43,9 +48,11 @@ export class Supervisor extends EventEmitter {
 
     this.process.on("message", (value) => this.emit("message", value));
     this.process.on("exit", (code, signal) => {
-      if (signal !== "SIGKILL") {
+      if (signal !== "SIGKILL" && this.options.supervise) {
         log.warn(`process exited with ${code}`);
       }
     });
+
+    return this.process;
   }
 }
