@@ -37,8 +37,7 @@
     "lint:prettier": "node --max-old-space-size=4096 node_modules/.bin/prettier --check \"src/**/*.{js,ts,tsx}\"",
     "lint:eslint": "node --max-old-space-size=4096 node_modules/.bin/eslint --quiet --ext ts,tsx src",
     "lint:fix": "node --max-old-space-size=4096 node_modules/.bin/prettier --write --check \"src/**/*.{js,ts,tsx}\" && eslint --ext ts,tsx --fix src",
-    "pkg:build": "pika build",
-    "pkg:release": "pika build && cd pkg && npm publish"
+    "pkg:build": "pika build"
   },
   "dependencies": {
     "chokidar": "^3.4.3",
