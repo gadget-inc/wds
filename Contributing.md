@@ -10,4 +10,4 @@ Run `yarn pkg:build`
 
 Decide what type of new version you're gonna publish and bump the version with `npm version minor|major|patch`
 
-Run `yarn pkg:build && cd pkg && npm release`
+Run `yarn pkg:build && cd pkg && npm publish && cd ..`
