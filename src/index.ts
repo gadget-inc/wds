@@ -66,7 +66,7 @@ const startTerminalCommandListener = (commands: Commands) => {
   return reader;
 };
 
-const startFilesystemWatcher = (workspaceRoot: string, commands: Commands) => {
+const startFilesystemWatcher = (commands: Commands) => {
   const watcher = watch([], { ignoreInitial: true });
 
   commands.supervisor.on("message", (value) => {
@@ -77,26 +77,15 @@ const startFilesystemWatcher = (workspaceRoot: string, commands: Commands) => {
     }
   });
 
-  const reload = (path: string) => {
-    log.info(`${path.replace(workspaceRoot, "")} changed, restarting...`);
-    void commands.reload();
-  };
-
-  const reloadAndNotify = (path: string) => {
-    log.info(
-      `${path.replace(
-        workspaceRoot,
-        ""
-      )} changed, reinitializing and restarting...`
-    );
-    void commands.invalidateBuildSetAndReload();
-  };
+  const reload = (path: string) => commands.enqueueReload(path, false);
+  const invalidateAndReload = (path: string) =>
+    commands.enqueueReload(path, true);
 
   watcher.on("change", reload);
-  watcher.on("add", reloadAndNotify);
-  watcher.on("addDir", reloadAndNotify);
-  watcher.on("unlink", reloadAndNotify);
-  watcher.on("unlinkDir", reloadAndNotify);
+  watcher.on("add", invalidateAndReload);
+  watcher.on("addDir", invalidateAndReload);
+  watcher.on("unlink", invalidateAndReload);
+  watcher.on("unlinkDir", invalidateAndReload);
 
   commands.addShutdownCleanup(() => void watcher.close());
 
@@ -151,12 +140,10 @@ export const esbuildDev = async (options: Options) => {
     options
   );
 
-  const commands = new Commands(compiler, supervisor);
+  const commands = new Commands(workspaceRoot, compiler, supervisor);
 
   let watcher: FSWatcher | undefined = undefined;
-  if (options.reloadOnChanges)
-    watcher = startFilesystemWatcher(workspaceRoot, commands);
-
+  if (options.reloadOnChanges) watcher = startFilesystemWatcher(commands);
   if (options.terminalCommands) startTerminalCommandListener(commands);
 
   startIPCServer(syncSocketPath, commands, watcher);
