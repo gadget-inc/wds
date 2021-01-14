@@ -14,5 +14,6 @@
     "target": "es2020",
     "types": ["node"],
     "noEmit": true
-  }
+  },
+  "exclude": ["./pkg"]
 }

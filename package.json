@@ -37,14 +37,14 @@
     "lint:prettier": "node --max-old-space-size=4096 node_modules/.bin/prettier --check \"src/**/*.{js,ts,tsx}\"",
     "lint:eslint": "node --max-old-space-size=4096 node_modules/.bin/eslint --quiet --ext ts,tsx src",
     "lint:fix": "node --max-old-space-size=4096 node_modules/.bin/prettier --write --check \"src/**/*.{js,ts,tsx}\" && eslint --ext ts,tsx --fix src",
-    "pkg:build": "pika build"
+    "pkg:build": "pika build",
+    "pkg:yalc": "yarn pkg:build && cd pkg && yalc push"
   },
   "dependencies": {
     "chokidar": "^3.4.3",
     "esbuild": "^0.8.23",
     "find-yarn-workspace-root": "^2.0.0",
     "node-sync-ipc": "^3.0.2",
-    "pkg-dir": "^5.0.0",
     "yargs": "^16.2.0"
   },
   "devDependencies": {

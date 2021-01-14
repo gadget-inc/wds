@@ -23,7 +23,50 @@ export class Compiler {
     this.service = await startService();
   }
 
-  async getTSConfig(filename: string) {
+  /**
+   * When a file operation occurs that requires setting up all the esbuild builds again, we run this.
+   * The operations that should cause an invalidation are:
+   *  - a change in the tsconfig.json
+   *  - any new file being added
+   *  - any existing file being deleted
+   *
+   * The set of files being built changing causes a reset because esbuild is only incremental over the exact same set of input options passed to it, which includes the files. So we need
+   */
+  async invalidateBuildSet() {
+    await Promise.all(this.builds.map((build) => build.rebuild.dispose()));
+    this.builds = [];
+    this.fileMap = {};
+    this.packageRootMap = {};
+  }
+
+  async compile(filename: string) {
+    await this.startBuilding(filename);
+
+    return path.join(
+      this.workDir,
+      filename.replace(this.workspaceRoot, "").replace(/.tsx?$/, ".js")
+    );
+  }
+
+  stop() {
+    this.service.stop();
+  }
+
+  async rebuild() {
+    const duration = await time(async () => {
+      await Promise.all(
+        this.builds.map((build) =>
+          this.reportESBuildErrors(() => build.rebuild())
+        )
+      );
+    });
+
+    log.debug("rebuild", {
+      duration,
+    });
+  }
+
+  private async getTSConfig(filename: string) {
     const packageRoot = await pkgDir(filename);
     if (!packageRoot)
       throw new Error(`couldnt find package root for ${filename}`);
@@ -57,60 +100,51 @@ export class Compiler {
     };
   }
 
-  async rebuildAll() {
-    const duration = await time(async () => {
-      await Promise.all(this.builds.map((build) => build.rebuild()));
-    });
-
-    log.debug("rebuild", {
-      duration,
-    });
-  }
-
-  async startBuilding(filename: string) {
+  /**
+   * Begins building a new file by starting up an incremental esbuild build for the whole project that file belongs to.
+   * If a file is part of a project we've seen before, it's a no-op.
+   **/
+  private async startBuilding(filename: string) {
     if (this.fileMap[filename]) return;
     const { packageRoot, tsConfig, tsConfigFile } = await this.getTSConfig(
       filename
     );
     if (this.packageRootMap[packageRoot]) return;
 
-    const build = await this.service.build({
-      entryPoints: [...tsConfig.fileNames],
-      incremental: true,
-      bundle: false,
-      platform: "node",
-      format: "cjs",
-      target: ["node14"],
-      outdir: this.workDir,
-      outbase: this.workspaceRoot,
-      tsconfig: tsConfigFile,
-      sourcemap: true,
+    await this.reportESBuildErrors(async () => {
+      const build = await this.service.build({
+        entryPoints: [...tsConfig.fileNames],
+        incremental: true,
+        bundle: false,
+        platform: "node",
+        format: "cjs",
+        target: ["node14"],
+        outdir: this.workDir,
+        outbase: this.workspaceRoot,
+        tsconfig: tsConfigFile,
+        sourcemap: true,
+      });
+
+      this.packageRootMap[packageRoot] = build;
+
+      log.debug("started build", {
+        root: tsConfigFile,
+        promptedBy: filename,
+        files: tsConfig.fileNames.length,
+      });
+
+      this.builds.push(build);
+      for (const file of tsConfig.fileNames) {
+        this.fileMap[file] = build;
+      }
     });
+  }
 
-    this.packageRootMap[packageRoot] = build;
-
-    log.debug("started build", {
-      root: tsConfigFile,
-      promptedBy: filename,
-      files: tsConfig.fileNames.length,
-    });
-
-    this.builds.push(build);
-    for (const file of tsConfig.fileNames) {
-      this.fileMap[file] = build;
+  private async reportESBuildErrors<T>(run: () => Promise<T>) {
+    try {
+      return await run();
+    } catch (error) {
+      log.error(error);
     }
-  }
-
-  async compile(filename: string) {
-    await this.startBuilding(filename);
-
-    return path.join(
-      this.workDir,
-      filename.replace(this.workspaceRoot, "").replace(/.tsx?$/, ".js")
-    );
-  }
-
-  stop() {
-    this.service.stop();
   }
 }
