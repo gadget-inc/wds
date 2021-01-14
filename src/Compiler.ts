@@ -122,7 +122,7 @@ export class Compiler {
         outdir: this.workDir,
         outbase: this.workspaceRoot,
         tsconfig: tsConfigFile,
-        sourcemap: true,
+        sourcemap: "inline",
       });
 
       this.packageRootMap[packageRoot] = build;
