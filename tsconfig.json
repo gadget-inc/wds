@@ -7,13 +7,14 @@
     "sourceMap": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "lib": ["es2020", "DOM"],
+    "lib": ["es2020"],
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    "module": "ESNext",
+    "module": "commonjs",
     "target": "es2020",
     "types": ["node"],
-    "noEmit": true
+    "declaration": true,
+    "outDir": "./pkg"
   },
   "exclude": ["./pkg"]
 }

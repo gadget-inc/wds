@@ -17,6 +17,9 @@ export class Compiler {
   // a map from a package root to which build is responsible for it
   packageRootMap: { [filename: string]: BuildIncremental } = {};
 
+  // a map from filename to which group of files are being built alongside it
+  groupMap: { [filename: string]: string[] } = {};
+
   constructor(readonly workspaceRoot: string, readonly workDir: string) {}
 
   async boot() {
@@ -39,13 +42,20 @@ export class Compiler {
     this.packageRootMap = {};
   }
 
+  /**
+   * Start compiling a new file at `filename`. Returns the destination that file's compiled output will be found at in the workdir
+   **/
   async compile(filename: string) {
     await this.startBuilding(filename);
+    return this.destination(filename);
+  }
 
-    return path.join(
-      this.workDir,
-      filename.replace(this.workspaceRoot, "").replace(/.tsx?$/, ".js")
-    );
+  /**
+   * For a given input filename, return all the destinations of the files compiled alongside it in it's compilation group
+   **/
+  fileGroup(filename: string) {
+    const files = this.groupMap[filename];
+    return Object.fromEntries(files.map((file) => [file, this.destination(file)]));
   }
 
   stop() {
@@ -54,11 +64,7 @@ export class Compiler {
 
   async rebuild() {
     const duration = await time(async () => {
-      await Promise.all(
-        this.builds.map((build) =>
-          this.reportESBuildErrors(() => build.rebuild())
-        )
-      );
+      await Promise.all(this.builds.map((build) => this.reportESBuildErrors(() => build.rebuild())));
     });
 
     log.debug("rebuild", {
@@ -68,29 +74,17 @@ export class Compiler {
 
   private async getTSConfig(filename: string) {
     const packageRoot = await pkgDir(filename);
-    if (!packageRoot)
-      throw new Error(`couldnt find package root for ${filename}`);
+    if (!packageRoot) throw new Error(`couldnt find package root for ${filename}`);
 
-    const tsConfigFile = ts.findConfigFile(
-      packageRoot,
-      ts.sys.fileExists,
-      "tsconfig.json"
-    );
+    const tsConfigFile = ts.findConfigFile(packageRoot, ts.sys.fileExists, "tsconfig.json");
 
-    if (!tsConfigFile)
-      throw new Error(`couldnt find tsconfig.json near ${filename}`);
+    if (!tsConfigFile) throw new Error(`couldnt find tsconfig.json near ${filename}`);
 
     const configFile = ts.readConfigFile(tsConfigFile, ts.sys.readFile);
-    const tsConfig = ts.parseJsonConfigFileContent(
-      configFile.config,
-      ts.sys,
-      packageRoot
-    );
+    const tsConfig = ts.parseJsonConfigFileContent(configFile.config, ts.sys, packageRoot);
 
     if (tsConfig.errors && tsConfig.errors.length > 0) {
-      throw new Error(
-        tsConfig.errors.map((error) => error.messageText).join("\n")
-      );
+      throw new Error(tsConfig.errors.map((error) => error.messageText).join("\n"));
     }
 
     return {
@@ -106,9 +100,7 @@ export class Compiler {
    **/
   private async startBuilding(filename: string) {
     if (this.fileMap[filename]) return;
-    const { packageRoot, tsConfig, tsConfigFile } = await this.getTSConfig(
-      filename
-    );
+    const { packageRoot, tsConfig, tsConfigFile } = await this.getTSConfig(filename);
     if (this.packageRootMap[packageRoot]) return;
 
     await this.reportESBuildErrors(async () => {
@@ -134,9 +126,13 @@ export class Compiler {
       });
 
       this.builds.push(build);
+
       for (const file of tsConfig.fileNames) {
         this.fileMap[file] = build;
+        this.groupMap[file] = tsConfig.fileNames;
       }
+
+      return tsConfig.fileNames;
     });
   }
 
@@ -147,4 +143,8 @@ export class Compiler {
       log.error(error);
     }
   }
+
+  private destination = (filename: string) => {
+    return path.join(this.workDir, filename.replace(this.workspaceRoot, "").replace(/.tsx?$/, ".js"));
+  };
 }

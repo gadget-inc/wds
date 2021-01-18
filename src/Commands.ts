@@ -13,11 +13,7 @@ export class Commands {
   cleanups: (() => void)[] = [];
   currentBatch: ReloadBatch = { paths: [], invalidate: false };
 
-  constructor(
-    readonly workspaceRoot: string,
-    readonly compiler: Compiler,
-    readonly supervisor: Supervisor
-  ) {}
+  constructor(readonly workspaceRoot: string, readonly compiler: Compiler, readonly supervisor: Supervisor) {}
 
   addShutdownCleanup(cleanup: () => void) {
     this.cleanups.push(cleanup);
@@ -25,8 +21,7 @@ export class Commands {
 
   enqueueReload(path: string, requiresInvalidation = false) {
     this.currentBatch.paths.push(path);
-    this.currentBatch.invalidate =
-      this.currentBatch.invalidate || requiresInvalidation;
+    this.currentBatch.invalidate = this.currentBatch.invalidate || requiresInvalidation;
     this.debouncedReload();
   }
 
@@ -37,8 +32,7 @@ export class Commands {
   async reloadNow() {
     const message = compact([
       this.currentBatch.paths[0].replace(this.workspaceRoot, ""),
-      this.currentBatch.paths.length > 1 &&
-        ` and ${this.currentBatch.paths.length - 1} others`,
+      this.currentBatch.paths.length > 1 && ` and ${this.currentBatch.paths.length - 1} others`,
       " changed, ",
       this.currentBatch.invalidate && "reinitializing and ",
       "restarting ...",

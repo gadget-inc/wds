@@ -6,11 +6,7 @@ import { log } from "./utils";
 /** */
 export class Supervisor extends EventEmitter {
   process!: ChildProcess;
-  constructor(
-    readonly argv: string[],
-    readonly socketPath: string,
-    readonly options: Options
-  ) {
+  constructor(readonly argv: string[], readonly socketPath: string, readonly options: Options) {
     super();
   }
 

@@ -14,7 +14,7 @@ Because we don't want to typecheck, we can use `esbuild` for it's outrageously f
 
 ## Usage
 
-```
+```text
 Options:
       --help            Show help                                      [boolean]
       --version         Show version number                            [boolean]

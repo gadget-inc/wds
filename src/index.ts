@@ -1,10 +1,11 @@
 import { FSWatcher, watch } from "chokidar";
 import findWorkspaceRoot from "find-yarn-workspace-root";
 import { promises as fs } from "fs";
-import { SyncIPCServer } from "node-sync-ipc";
+import http from "http";
 import os from "os";
 import path from "path";
 import readline from "readline";
+import { promisify } from "util";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { Commands } from "./Commands";
@@ -34,8 +35,7 @@ export const cli = async () => {
     .option("supervise", {
       alias: "s",
       type: "boolean",
-      description:
-        "Supervise and restart the process when it exits indefinitely",
+      description: "Supervise and restart the process when it exits indefinitely",
       default: false,
     }).argv;
 
@@ -78,8 +78,7 @@ const startFilesystemWatcher = (commands: Commands) => {
   });
 
   const reload = (path: string) => commands.enqueueReload(path, false);
-  const invalidateAndReload = (path: string) =>
-    commands.enqueueReload(path, true);
+  const invalidateAndReload = (path: string) => commands.enqueueReload(path, true);
 
   watcher.on("change", reload);
   watcher.on("add", invalidateAndReload);
@@ -92,38 +91,54 @@ const startFilesystemWatcher = (commands: Commands) => {
   return watcher;
 };
 
-const startIPCServer = (
-  socketPath: string,
-  commands: Commands,
-  watcher?: FSWatcher
-) => {
-  const server = new SyncIPCServer(socketPath);
-
-  server.onMessage(
-    "compile",
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    async (respond: (response: string) => void, filename: string) => {
-      try {
-        const compiledPath = await commands.compiler.compile(filename);
-        respond(compiledPath);
-        watcher?.add(filename);
-      } catch (e) {
-        log.error(`Error compiling file ${filename}, can't continue...`, e);
-      }
+const startIPCServer = async (socketPath: string, commands: Commands, watcher?: FSWatcher) => {
+  const compile = async (filename: string) => {
+    try {
+      await commands.compiler.compile(filename);
+      watcher?.add(filename);
+      return commands.compiler.fileGroup(filename);
+    } catch (e) {
+      log.error(`Error compiling file ${filename}, can't continue...`, e);
     }
-  );
+  };
 
-  server.startListen();
-  commands.addShutdownCleanup(() => server.stop());
+  const server = http.createServer((request, response) => {
+    const chunks: Uint8Array[] = [];
+    response.setHeader("Content-Type", "application/json");
+
+    request
+      .on("error", (err) => {
+        console.error(err);
+      })
+      .on("data", (chunk) => {
+        chunks.push(chunk);
+      })
+      .on("end", () => {
+        const filename = Buffer.concat(chunks).toString("utf-8");
+
+        compile(filename)
+          .then((filenames) => {
+            response.statusCode = 200;
+            response.write(JSON.stringify({ filenames }));
+            response.end();
+          })
+          .catch(() => {
+            response.statusCode = 500;
+            response.write(JSON.stringify({ error: `error compiling file ${filename}` }));
+            response.end();
+          });
+      });
+  });
+
+  await (promisify(server.listen.bind(server)) as any)(socketPath);
+
+  commands.addShutdownCleanup(() => server.close());
 
   return server;
 };
 
 const childProcessArgs = () => {
-  return [
-    "-r",
-    path.join(__dirname, "..", "dist-src", "child-process-registration.js"),
-  ];
+  return ["-r", path.join(__dirname, "child-process-registration.js")];
 };
 
 export const esbuildDev = async (options: Options) => {
@@ -134,11 +149,7 @@ export const esbuildDev = async (options: Options) => {
   const compiler = new Compiler(workspaceRoot, workDir);
   await compiler.boot();
 
-  const supervisor = new Supervisor(
-    [...childProcessArgs(), ...options.argv],
-    syncSocketPath,
-    options
-  );
+  const supervisor = new Supervisor([...childProcessArgs(), ...options.argv], syncSocketPath, options);
 
   const commands = new Commands(workspaceRoot, compiler, supervisor);
 
@@ -146,13 +157,10 @@ export const esbuildDev = async (options: Options) => {
   if (options.reloadOnChanges) watcher = startFilesystemWatcher(commands);
   if (options.terminalCommands) startTerminalCommandListener(commands);
 
-  startIPCServer(syncSocketPath, commands, watcher);
+  await startIPCServer(syncSocketPath, commands, watcher);
 
   // kickoff the first child process
-  options.supervise &&
-    log.info(
-      `Supervision starting for command: node ${options.argv.join(" ")}`
-    );
+  options.supervise && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
 
   await commands.invalidateBuildSetAndReload();
 
