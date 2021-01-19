@@ -13,9 +13,14 @@
   "publishConfig": {
     "access": "public"
   },
-  "source": "src/index.js",
   "types": "pkg/index.d.ts",
   "main": "pkg/index.js",
+  "files": [
+    "pkg/*",
+    "Readme.md",
+    "Contributing.md",
+    "LICENSE.txt"
+  ],
   "scripts": {
     "build": "rm -rf pkg && tsc",
     "watch": "tsc -w",
