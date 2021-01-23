@@ -105,7 +105,7 @@ export class SyncWorker {
 
 // This file re-executes itself in the worker thread. Actually run the worker code within the inner thread if we're the inner thread
 if (!workerThreads.isMainThread) {
-  const runWorker = async () => {
+  const runWorker = () => {
     // try to be immune to https://github.com/nodejs/node/issues/36531
     const workerData: SyncWorkerData | undefined = workerThreads.workerData;
     if (!workerData) return setImmediate(runWorker as any); // eslint-disable-line @typescript-eslint/no-implied-eval
@@ -129,13 +129,15 @@ if (!workerThreads.isMainThread) {
       Atomics.notify(sharedBufferView, 0, Infinity);
     };
 
-    while (true) {
-      const message = receiveMessageOnPort(port);
-      if (message) {
-        await handleCall(message.message as SyncWorkerCall);
-      }
+    port.on("message", (message) => {
+      void handleCall(message.message as SyncWorkerCall);
+    });
+
+    let message;
+    if ((message = receiveMessageOnPort(port))) {
+      void handleCall(message.message as SyncWorkerCall);
     }
   };
 
-  void runWorker();
+  runWorker();
 }
