@@ -1,6 +1,6 @@
 {
   "name": "esbuild-dev",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "author": "Harry Brundage",
   "license": "MIT",
   "bin": {
