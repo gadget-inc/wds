@@ -1,4 +1,5 @@
 // have to use a module import like this so we can re-access imported properties as they might change, see https://github.com/nodejs/node/issues/36531
+import { promises as fs } from "fs";
 import workerThreads, { MessageChannel, MessagePort, receiveMessageOnPort, Worker } from "worker_threads";
 import { log } from "./utils";
 
@@ -83,7 +84,10 @@ export class SyncWorker {
 
     // synchronously wait for worker thread to get back to us
     const status = Atomics.wait(sharedBufferView, 0, 0, 5000);
-    if (status === "timed-out") throw new Error("[esbuild-dev] Internal error: timed out communicating with esbuild-dev leader process");
+    if (status === "timed-out")
+      throw new Error(
+        "[esbuild-dev] Internal error: timed out communicating with esbuild-dev sync worker thread, likely an esbuild-dev bug"
+      );
     if (status !== "ok" && status !== "not-equal")
       throw new Error(`[esbuild-dev] Internal error: Atomics.wait() failed with status ${status}`);
 
@@ -105,10 +109,11 @@ export class SyncWorker {
 
 // This file re-executes itself in the worker thread. Actually run the worker code within the inner thread if we're the inner thread
 if (!workerThreads.isMainThread) {
-  const runWorker = () => {
+  const runWorker = async () => {
     // try to be immune to https://github.com/nodejs/node/issues/36531
     const workerData: SyncWorkerData | undefined = workerThreads.workerData;
     if (!workerData) return setImmediate(runWorker as any); // eslint-disable-line @typescript-eslint/no-implied-eval
+    const file = process.env["ESBUILD_DEV_DEBUG"] ? await fs.open("/tmp/esbuild-dev-debug-log.txt", "w") : undefined;
     log.debug("booted syncworker worker");
     const implementation = require(workerData.scriptPath); // eslint-disable-line @typescript-eslint/no-var-requires
     const port: MessagePort = workerData.port;
@@ -129,15 +134,18 @@ if (!workerThreads.isMainThread) {
       Atomics.notify(sharedBufferView, 0, Infinity);
     };
 
-    port.on("message", (message) => {
-      void handleCall(message.message as SyncWorkerCall);
+    port.addListener("message", (message) => {
+      void file?.write(`got port message: ${JSON.stringify(message)}`);
+      void handleCall(message as SyncWorkerCall);
     });
 
-    let message;
-    if ((message = receiveMessageOnPort(port))) {
-      void handleCall(message.message as SyncWorkerCall);
-    }
+    port.addListener("messageerror", (error) => {
+      void file?.write(`got port message error: ${JSON.stringify(error)}`);
+      log.error("got port message error", error);
+    });
+
+    void file?.write(`sync worker booted`);
   };
 
-  runWorker();
+  void runWorker();
 }

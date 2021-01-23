@@ -1,6 +1,5 @@
 import { BuildIncremental, Service, startService } from "esbuild";
 import path from "path";
-import pkgDir from "pkg-dir";
 import ts from "typescript";
 import { log, time } from "./utils";
 
@@ -14,8 +13,8 @@ export class Compiler {
   // a map from filename to which build is responsible for it
   fileMap: { [filename: string]: BuildIncremental } = {};
 
-  // a map from a package root to which build is responsible for it
-  packageRootMap: { [filename: string]: BuildIncremental } = {};
+  // a map from a tsconfig file to which build is responsible for it
+  tsConfigMap: { [filename: string]: BuildIncremental } = {};
 
   // a map from filename to which group of files are being built alongside it
   groupMap: { [filename: string]: string[] } = {};
@@ -39,7 +38,7 @@ export class Compiler {
     await Promise.all(this.builds.map((build) => build.rebuild.dispose()));
     this.builds = [];
     this.fileMap = {};
-    this.packageRootMap = {};
+    this.tsConfigMap = {};
   }
 
   /**
@@ -73,22 +72,18 @@ export class Compiler {
   }
 
   private async getTSConfig(filename: string) {
-    const packageRoot = await pkgDir(filename);
-    if (!packageRoot) throw new Error(`couldnt find package root for ${filename}`);
-
-    const tsConfigFile = ts.findConfigFile(packageRoot, ts.sys.fileExists, "tsconfig.json");
+    const tsConfigFile = ts.findConfigFile(filename, ts.sys.fileExists, "tsconfig.json");
 
     if (!tsConfigFile) throw new Error(`couldnt find tsconfig.json near ${filename}`);
 
     const configFile = ts.readConfigFile(tsConfigFile, ts.sys.readFile);
-    const tsConfig = ts.parseJsonConfigFileContent(configFile.config, ts.sys, packageRoot);
+    const tsConfig = ts.parseJsonConfigFileContent(configFile.config, ts.sys, path.dirname(tsConfigFile));
 
     if (tsConfig.errors && tsConfig.errors.length > 0) {
       throw new Error(tsConfig.errors.map((error) => error.messageText).join("\n"));
     }
 
     return {
-      packageRoot,
       tsConfigFile,
       tsConfig,
     };
@@ -100,8 +95,8 @@ export class Compiler {
    **/
   private async startBuilding(filename: string) {
     if (this.fileMap[filename]) return;
-    const { packageRoot, tsConfig, tsConfigFile } = await this.getTSConfig(filename);
-    if (this.packageRootMap[packageRoot]) return;
+    const { tsConfig, tsConfigFile } = await this.getTSConfig(filename);
+    if (this.tsConfigMap[tsConfigFile]) return;
 
     await this.reportESBuildErrors(async () => {
       const build = await this.service.build({
@@ -117,7 +112,7 @@ export class Compiler {
         sourcemap: "inline",
       });
 
-      this.packageRootMap[packageRoot] = build;
+      this.tsConfigMap[tsConfigFile] = build;
 
       log.debug("started build", {
         root: tsConfigFile,
