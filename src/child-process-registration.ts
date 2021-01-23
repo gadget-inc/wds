@@ -1,8 +1,31 @@
+import { throttle } from "lodash";
+
 /* eslint-disable @typescript-eslint/no-var-requires */
+const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { SyncWorker } = require("./SyncWorker");
 const { isMainThread } = require("worker_threads");
+
+let pendingRequireNotifications: string[] = [];
+const throttledRequireFlush = throttle(() => {
+  const request = http.request(
+    { socketPath: process.env["ESBUILD_DEV_SOCKET_PATH"]!, path: "/file-required", method: "POST" },
+    () => {
+      // don't care if it worked
+    },
+    300
+  );
+
+  request.write(JSON.stringify(pendingRequireNotifications));
+  request.end();
+  pendingRequireNotifications = [];
+});
+
+const notifyParentProcessOfRequire = (filename: string) => {
+  pendingRequireNotifications.push(filename);
+  void throttledRequireFlush();
+};
 
 if (isMainThread) {
   const worker = new SyncWorker(path.join(__dirname, "child-process-ipc-worker.js"));
@@ -34,6 +57,7 @@ if (isMainThread) {
     require.extensions[extension] = (module: any, filename: string) => {
       const compiledFilename = compile(filename);
       const content = fs.readFileSync(compiledFilename, "utf8");
+      notifyParentProcessOfRequire(filename);
       module._compile(content, filename);
     };
   }

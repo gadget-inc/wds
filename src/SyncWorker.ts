@@ -114,7 +114,6 @@ if (!workerThreads.isMainThread) {
     const workerData: SyncWorkerData | undefined = workerThreads.workerData;
     if (!workerData) return setImmediate(runWorker as any); // eslint-disable-line @typescript-eslint/no-implied-eval
     const file = process.env["ESBUILD_DEV_DEBUG"] ? await fs.open("/tmp/esbuild-dev-debug-log.txt", "w") : undefined;
-    log.debug("booted syncworker worker");
     const implementation = require(workerData.scriptPath); // eslint-disable-line @typescript-eslint/no-var-requires
     const port: MessagePort = workerData.port;
 
@@ -125,6 +124,7 @@ if (!workerThreads.isMainThread) {
         const result = await implementation(...call.args);
         port.postMessage({ id: call.id, result });
       } catch (error) {
+        void file?.write(`error running syncworker: ${JSON.stringify(error)}\n`);
         port.postMessage({ id: call.id, error });
       }
 
@@ -135,16 +135,16 @@ if (!workerThreads.isMainThread) {
     };
 
     port.addListener("message", (message) => {
-      void file?.write(`got port message: ${JSON.stringify(message)}`);
+      void file?.write(`got port message: ${JSON.stringify(message)}\n`);
       void handleCall(message as SyncWorkerCall);
     });
 
     port.addListener("messageerror", (error) => {
-      void file?.write(`got port message error: ${JSON.stringify(error)}`);
+      void file?.write(`got port message error: ${JSON.stringify(error)}\n`);
       log.error("got port message error", error);
     });
 
-    void file?.write(`sync worker booted`);
+    void file?.write(`sync worker booted\n`);
   };
 
   void runWorker();

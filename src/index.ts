@@ -1,15 +1,14 @@
 import { FSWatcher, watch } from "chokidar";
 import findWorkspaceRoot from "find-yarn-workspace-root";
 import { promises as fs } from "fs";
-import http from "http";
 import os from "os";
 import path from "path";
 import readline from "readline";
-import { promisify } from "util";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { Commands } from "./Commands";
 import { Compiler } from "./Compiler";
+import { MiniServer } from "./mini-server";
 import { Options } from "./Options";
 import { Supervisor } from "./Supervisor";
 import { log } from "./utils";
@@ -102,35 +101,19 @@ const startIPCServer = async (socketPath: string, commands: Commands, watcher?: 
     }
   };
 
-  const server = http.createServer((request, response) => {
-    const chunks: Uint8Array[] = [];
-    response.setHeader("Content-Type", "application/json");
-
-    request
-      .on("error", (err) => {
-        console.error(err);
-      })
-      .on("data", (chunk) => {
-        chunks.push(chunk);
-      })
-      .on("end", () => {
-        const filename = Buffer.concat(chunks).toString("utf-8");
-
-        compile(filename)
-          .then((filenames) => {
-            response.statusCode = 200;
-            response.write(JSON.stringify({ filenames }));
-            response.end();
-          })
-          .catch(() => {
-            response.statusCode = 500;
-            response.write(JSON.stringify({ error: `error compiling file ${filename}` }));
-            response.end();
-          });
-      });
+  const server = new MiniServer({
+    "/compile": async (request, reply) => {
+      const results = await compile(request.body);
+      reply.json({ filenames: results });
+    },
+    "/file-required": (request, reply) => {
+      for (const filename of request.json()) {
+        watcher?.add(filename);
+      }
+      reply.json({ status: "ok" });
+    },
   });
-
-  await (promisify(server.listen.bind(server)) as any)(socketPath);
+  await server.start(socketPath);
 
   commands.addShutdownCleanup(() => server.close());
 
