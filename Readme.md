@@ -2,6 +2,17 @@
 
 A reloading dev server for server side TypeScript projects. Compiles TypeScript _real_ fast, on demand, using `require.extensions`, and restarts the server when things change. Similar to, and inspired by `ts-node-dev`.
 
+## Features
+
+- Builds and runs TypeScript really fast (using [`esbuild`](https://github.com/evanw/esbuild))
+- Incrementally rebuilds only what has changed in the `--watch` mode, and restarts the process when files change
+- Supervises the node.js process with `--supervise` to keep incremental context around on process crash, and can restart on demand in the `--commands` mode
+- Plays nice with node.js command line flags like `--inspect` or `--prof`
+
+## Status
+
+Pretty darn new! Patches super welcome.
+
 ## Motivation
 
 You deserve to get stuff done. You deserve a fast iteration loop. If you're writing TypeScript for node, you still deserve to have a fast interation loop. [`esbuild`](https://github.com/evanw/esbuild) loves you, and I love you, and we think you deserve it.
@@ -16,12 +27,15 @@ Because we don't want to typecheck, we can use `esbuild` for it's outrageously f
 
 ```text
 Options:
-      --help            Show help                                      [boolean]
-      --version         Show version number                            [boolean]
-      --restarts, --rs  Trigger restarts by watching for the rs characters on
-                        stdin                         [boolean] [default: false]
-  -w, --watch           Trigger restarts by watching for changes to required
-                        files                          [boolean] [default: true]
+      --help       Show help                                           [boolean]
+      --version    Show version number                                 [boolean]
+  -c, --commands   Trigger commands by watching for them on stdin. Prevents
+                   stdin from being forwarded to the process. Only command right
+                   now is `rs` to restart the server. [boolean] [default: false]
+  -w, --watch      Trigger restarts by watching for changes to required files
+                                                       [boolean] [default: true]
+  -s, --supervise  Supervise and restart the process when it exits indefinitely
+                                                      [boolean] [default: false]
 ```
 
 ## Comparison to `ts-node-dev`
