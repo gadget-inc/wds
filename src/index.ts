@@ -127,7 +127,12 @@ const childProcessArgs = () => {
 export const esbuildDev = async (options: Options) => {
   const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "esbuild-dev"));
-  const syncSocketPath = path.join(workDir, "ipc.sock");
+  let syncSocketPath: string;
+  if (os.platform() === "win32") {
+    syncSocketPath = path.join("\\\\?\\pipe", workDir, "ipc.sock");
+  } else {
+    syncSocketPath = path.join(workDir, "ipc.sock");
+  }
 
   const compiler = new Compiler(workspaceRoot, workDir);
   await compiler.boot();
