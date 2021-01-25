@@ -98,9 +98,16 @@ export class Compiler {
     const { tsConfig, tsConfigFile } = await this.getTSConfig(filename);
     if (this.tsConfigMap[tsConfigFile]) return;
 
+    let fileNames: string[];
+    if (process.platform === "win32") {
+      fileNames = tsConfig.fileNames.map(e => e.replace(/\//g, "\\"));
+    } else {
+      fileNames = tsConfig.fileNames;
+    }
+
     await this.reportESBuildErrors(async () => {
       const build = await this.service.build({
-        entryPoints: [...tsConfig.fileNames],
+        entryPoints: [...fileNames],
         incremental: true,
         bundle: false,
         platform: "node",
@@ -117,17 +124,17 @@ export class Compiler {
       log.debug("started build", {
         root: tsConfigFile,
         promptedBy: filename,
-        files: tsConfig.fileNames.length,
+        files: fileNames.length,
       });
 
       this.builds.push(build);
 
-      for (const file of tsConfig.fileNames) {
+      for (const file of fileNames) {
         this.fileMap[file] = build;
-        this.groupMap[file] = tsConfig.fileNames;
+        this.groupMap[file] = fileNames;
       }
 
-      return tsConfig.fileNames;
+      return fileNames;
     });
   }
 
