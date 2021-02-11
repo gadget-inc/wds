@@ -33,14 +33,17 @@
   "dependencies": {
     "chokidar": "^3.4.3",
     "esbuild": "^0.8.23",
+    "find-root": "^1.1.0",
     "find-yarn-workspace-root": "^2.0.0",
+    "globby": "^11.0.2",
+    "lodash": "^4.17.20",
     "pkg-dir": "^5.0.0",
-    "yargs": "^16.2.0",
-    "lodash": "^4.17.20"
+    "yargs": "^16.2.0"
   },
   "devDependencies": {
     "@gadgetinc/eslint-config": "^0.1.1",
     "@gadgetinc/prettier-config": "^0.1.0",
+    "@types/find-root": "^1.1.2",
     "@types/lodash": "^4.14.167",
     "@types/node": "^14.14.14",
     "@types/yargs": "^15.0.12",

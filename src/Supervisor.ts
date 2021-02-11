@@ -1,12 +1,13 @@
 import { ChildProcess, spawn } from "child_process";
 import { EventEmitter } from "events";
-import { Options } from "./Options";
+import { RunOptions } from "./Options";
+import { Project } from "./Project";
 import { log } from "./utils";
 
 /** */
 export class Supervisor extends EventEmitter {
   process!: ChildProcess;
-  constructor(readonly argv: string[], readonly socketPath: string, readonly options: Options) {
+  constructor(readonly argv: string[], readonly socketPath: string, readonly options: RunOptions, readonly project: Project) {
     super();
   }
 
@@ -38,6 +39,7 @@ export class Supervisor extends EventEmitter {
       env: {
         ...process.env,
         ESBUILD_DEV_SOCKET_PATH: this.socketPath,
+        ESBUILD_DEV_EXTENSIONS: this.project.config.extensions.join(","),
       },
       stdio: [null, "inherit", "inherit", "ipc"],
     });

@@ -1,4 +1,5 @@
-import { FSWatcher, watch } from "chokidar";
+import { watch } from "chokidar";
+import findRoot from "find-root";
 import findWorkspaceRoot from "find-yarn-workspace-root";
 import { promises as fs } from "fs";
 import os from "os";
@@ -6,12 +7,12 @@ import path from "path";
 import readline from "readline";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { Commands } from "./Commands";
 import { Compiler } from "./Compiler";
 import { MiniServer } from "./mini-server";
-import { Options } from "./Options";
+import { RunOptions } from "./Options";
+import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
-import { log } from "./utils";
+import { log, projectConfig } from "./utils";
 
 export const cli = async () => {
   const args = yargs(hideBin(process.argv))
@@ -46,7 +47,7 @@ export const cli = async () => {
   });
 };
 
-const startTerminalCommandListener = (commands: Commands) => {
+const startTerminalCommandListener = (project: Project) => {
   const reader = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -56,19 +57,19 @@ const startTerminalCommandListener = (commands: Commands) => {
   reader.on("line", (line: string) => {
     if (line.trim() === "rs") {
       log.info("Restart command recieved, restarting...");
-      void commands.invalidateBuildSetAndReload();
+      void project.invalidateBuildSetAndReload();
     }
   });
 
-  commands.addShutdownCleanup(() => reader.close());
+  project.addShutdownCleanup(() => reader.close());
 
   return reader;
 };
 
-const startFilesystemWatcher = (commands: Commands) => {
+const startFilesystemWatcher = (project: Project) => {
   const watcher = watch([], { ignoreInitial: true });
 
-  commands.supervisor.on("message", (value) => {
+  project.supervisor.on("message", (value) => {
     if (value.require) {
       if (!value.require.includes("node_modules")) {
         watcher.add(value.require);
@@ -76,8 +77,8 @@ const startFilesystemWatcher = (commands: Commands) => {
     }
   });
 
-  const reload = (path: string) => commands.enqueueReload(path, false);
-  const invalidateAndReload = (path: string) => commands.enqueueReload(path, true);
+  const reload = (path: string) => project.enqueueReload(path, false);
+  const invalidateAndReload = (path: string) => project.enqueueReload(path, true);
 
   watcher.on("change", reload);
   watcher.on("add", invalidateAndReload);
@@ -85,17 +86,17 @@ const startFilesystemWatcher = (commands: Commands) => {
   watcher.on("unlink", invalidateAndReload);
   watcher.on("unlinkDir", invalidateAndReload);
 
-  commands.addShutdownCleanup(() => void watcher.close());
+  project.addShutdownCleanup(() => void watcher.close());
 
   return watcher;
 };
 
-const startIPCServer = async (socketPath: string, commands: Commands, watcher?: FSWatcher) => {
+const startIPCServer = async (socketPath: string, project: Project) => {
   const compile = async (filename: string) => {
     try {
-      await commands.compiler.compile(filename);
-      watcher?.add(filename);
-      return commands.compiler.fileGroup(filename);
+      await project.compiler.compile(filename);
+      project.watcher?.add(filename);
+      return project.compiler.fileGroup(filename);
     } catch (e) {
       log.error(`Error compiling file ${filename}, can't continue...`, e);
     }
@@ -108,14 +109,14 @@ const startIPCServer = async (socketPath: string, commands: Commands, watcher?: 
     },
     "/file-required": (request, reply) => {
       for (const filename of request.json()) {
-        watcher?.add(filename);
+        project.watcher?.add(filename);
       }
       reply.json({ status: "ok" });
     },
   });
   await server.start(socketPath);
 
-  commands.addShutdownCleanup(() => server.close());
+  project.addShutdownCleanup(() => server.close());
 
   return server;
 };
@@ -124,7 +125,7 @@ const childProcessArgs = () => {
   return ["-r", path.join(__dirname, "child-process-registration.js")];
 };
 
-export const esbuildDev = async (options: Options) => {
+export const esbuildDev = async (options: RunOptions) => {
   const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "esbuild-dev"));
   let syncSocketPath: string;
@@ -134,29 +135,28 @@ export const esbuildDev = async (options: Options) => {
     syncSocketPath = path.join(workDir, "ipc.sock");
   }
 
-  const compiler = new Compiler(workspaceRoot, workDir);
-  await compiler.boot();
+  const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())));
 
-  const supervisor = new Supervisor([...childProcessArgs(), ...options.argv], syncSocketPath, options);
+  project.compiler = new Compiler(workspaceRoot, workDir);
+  await project.compiler.boot();
 
-  const commands = new Commands(workspaceRoot, compiler, supervisor);
+  project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], syncSocketPath, options, project);
 
-  let watcher: FSWatcher | undefined = undefined;
-  if (options.reloadOnChanges) watcher = startFilesystemWatcher(commands);
-  if (options.terminalCommands) startTerminalCommandListener(commands);
+  if (options.reloadOnChanges) project.watcher = startFilesystemWatcher(project);
+  if (options.terminalCommands) startTerminalCommandListener(project);
 
-  await startIPCServer(syncSocketPath, commands, watcher);
+  await startIPCServer(syncSocketPath, project);
 
   // kickoff the first child process
   options.supervise && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
 
-  await commands.invalidateBuildSetAndReload();
+  await project.invalidateBuildSetAndReload();
 
   process.on("SIGINT", () => {
-    commands.shutdown(0);
+    project.shutdown(0);
   });
 
   if (!options.supervise) {
-    supervisor.process.on("exit", (code) => commands.shutdown(code || 0));
+    project.supervisor.process.on("exit", (code) => project.shutdown(code || 0));
   }
 };

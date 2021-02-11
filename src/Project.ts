@@ -1,5 +1,7 @@
+import { FSWatcher } from "chokidar";
 import { compact, debounce } from "lodash";
 import { Compiler } from "./Compiler";
+import { ProjectConfig } from "./Options";
 import { Supervisor } from "./Supervisor";
 import { log } from "./utils";
 
@@ -9,11 +11,14 @@ interface ReloadBatch {
 }
 
 /** Orchestrates all the other bits to respond to high level commands */
-export class Commands {
+export class Project {
   cleanups: (() => void)[] = [];
   currentBatch: ReloadBatch = { paths: [], invalidate: false };
+  compiler!: Compiler;
+  supervisor!: Supervisor;
+  watcher?: FSWatcher;
 
-  constructor(readonly workspaceRoot: string, readonly compiler: Compiler, readonly supervisor: Supervisor) {}
+  constructor(readonly workspaceRoot: string, readonly config: ProjectConfig) {}
 
   addShutdownCleanup(cleanup: () => void) {
     this.cleanups.push(cleanup);

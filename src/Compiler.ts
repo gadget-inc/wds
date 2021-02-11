@@ -1,7 +1,11 @@
 import { BuildIncremental, Service, startService } from "esbuild";
+import findRoot from "find-root";
+import globby from "globby";
 import path from "path";
-import ts from "typescript";
-import { log, time } from "./utils";
+import { log, projectConfig, time } from "./utils";
+
+// https://esbuild.github.io/api/#resolve-extensions
+const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
 
 /** Implements TypeScript building using esbuild */
 export class Compiler {
@@ -14,7 +18,7 @@ export class Compiler {
   fileMap: { [filename: string]: BuildIncremental } = {};
 
   // a map from a tsconfig file to which build is responsible for it
-  tsConfigMap: { [filename: string]: BuildIncremental } = {};
+  rootMap: { [filename: string]: BuildIncremental } = {};
 
   // a map from filename to which group of files are being built alongside it
   groupMap: { [filename: string]: string[] } = {};
@@ -38,7 +42,7 @@ export class Compiler {
     await Promise.all(this.builds.map((build) => build.rebuild.dispose()));
     this.builds = [];
     this.fileMap = {};
-    this.tsConfigMap = {};
+    this.rootMap = {};
   }
 
   /**
@@ -54,6 +58,7 @@ export class Compiler {
    **/
   fileGroup(filename: string) {
     const files = this.groupMap[filename];
+    if (!files) return {};
     return Object.fromEntries(files.map((file) => [file, this.destination(file)]));
   }
 
@@ -71,22 +76,21 @@ export class Compiler {
     });
   }
 
-  private async getTSConfig(filename: string) {
-    const tsConfigFile = ts.findConfigFile(filename, ts.sys.fileExists, "tsconfig.json");
+  private async getModule(filename: string) {
+    const root = findRoot(filename);
+    const config = await projectConfig(root);
+    const extensions = config.esbuild?.resolveExtensions || DefaultExtensions;
 
-    if (!tsConfigFile) throw new Error(`couldnt find tsconfig.json near ${filename}`);
+    const globs = [`**/*{${extensions.join(",")}}`, `!node_modules`, ...(config.ignore || []).map((ignore) => `!${ignore}`)];
+    log.debug("searching for filenames", { config, root, globs });
 
-    const configFile = ts.readConfigFile(tsConfigFile, ts.sys.readFile);
-    const tsConfig = ts.parseJsonConfigFileContent(configFile.config, ts.sys, path.dirname(tsConfigFile));
+    let fileNames = await globby(globs, { cwd: root, absolute: true });
 
-    if (tsConfig.errors && tsConfig.errors.length > 0) {
-      throw new Error(tsConfig.errors.map((error) => error.messageText).join("\n"));
+    if (process.platform === "win32") {
+      fileNames = fileNames.map((fileName) => fileName.replace(/\//g, "\\"));
     }
 
-    return {
-      tsConfigFile,
-      tsConfig,
-    };
+    return { root, fileNames, config };
   }
 
   /**
@@ -95,15 +99,8 @@ export class Compiler {
    **/
   private async startBuilding(filename: string) {
     if (this.fileMap[filename]) return;
-    const { tsConfig, tsConfigFile } = await this.getTSConfig(filename);
-    if (this.tsConfigMap[tsConfigFile]) return;
-
-    let fileNames: string[];
-    if (process.platform === "win32") {
-      fileNames = tsConfig.fileNames.map(e => e.replace(/\//g, "\\"));
-    } else {
-      fileNames = tsConfig.fileNames;
-    }
+    const { root, fileNames, config } = await this.getModule(filename);
+    if (this.rootMap[root]) return;
 
     await this.reportESBuildErrors(async () => {
       const build = await this.service.build({
@@ -115,14 +112,14 @@ export class Compiler {
         target: ["node14"],
         outdir: this.workDir,
         outbase: this.workspaceRoot,
-        tsconfig: tsConfigFile,
         sourcemap: "inline",
+        ...(config.esbuild as Record<string, any>),
       });
 
-      this.tsConfigMap[tsConfigFile] = build;
+      this.rootMap[root] = build;
 
       log.debug("started build", {
-        root: tsConfigFile,
+        root,
         promptedBy: filename,
         files: fileNames.length,
       });
@@ -147,6 +144,14 @@ export class Compiler {
   }
 
   private destination = (filename: string) => {
-    return path.join(this.workDir, filename.replace(this.workspaceRoot, "").replace(/.tsx?$/, ".js"));
+    // make path relative to the workspace root
+    let dest = filename.replace(this.workspaceRoot, "");
+    // strip the original extension and replace with .js
+    const extension = path.extname(dest);
+    if (extension != ".js") {
+      dest = dest.slice(0, dest.length - extension.length) + ".js";
+    }
+
+    return path.join(this.workDir, dest);
   };
 }
