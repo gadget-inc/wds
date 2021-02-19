@@ -86,6 +86,7 @@ const startFilesystemWatcher = (project: Project) => {
   watcher.on("unlink", invalidateAndReload);
   watcher.on("unlinkDir", invalidateAndReload);
 
+  project.watcher = watcher;
   project.addShutdownCleanup(() => void watcher.close());
 
   return watcher;
@@ -142,21 +143,22 @@ export const esbuildDev = async (options: RunOptions) => {
 
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], syncSocketPath, options, project);
 
-  if (options.reloadOnChanges) project.watcher = startFilesystemWatcher(project);
+  if (options.reloadOnChanges) startFilesystemWatcher(project);
   if (options.terminalCommands) startTerminalCommandListener(project);
-
   await startIPCServer(syncSocketPath, project);
 
   // kickoff the first child process
   options.supervise && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
-
   await project.invalidateBuildSetAndReload();
 
   process.on("SIGINT", () => {
     project.shutdown(0);
   });
 
-  if (!options.supervise) {
-    project.supervisor.process.on("exit", (code) => project.shutdown(code || 0));
-  }
+  project.supervisor.process.on("exit", (code) => {
+    log.debug(`child process exited with code ${code}, ${options.supervise ? "not exiting because supervise mode" : "exiting..."}`);
+    if (!options.supervise) {
+      project.shutdown(code || 0);
+    }
+  });
 };
