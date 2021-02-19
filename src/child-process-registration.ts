@@ -10,7 +10,7 @@ const { isMainThread } = require("worker_threads");
 let pendingRequireNotifications: string[] = [];
 const throttledRequireFlush = throttle(() => {
   const request = http.request(
-    { socketPath: process.env["ESBUILD_DEV_SOCKET_PATH"]!, path: "/file-required", method: "POST" },
+    { socketPath: process.env["ESBUILD_DEV_SOCKET_PATH"]!, path: "/file-required", method: "POST", timeout: 200 },
     () => {
       // don't care if it worked
     },
