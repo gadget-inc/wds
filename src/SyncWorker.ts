@@ -64,7 +64,7 @@ export class SyncWorker {
     });
 
     // Calling unref() on a worker will allow the thread to exit if it's the last only active handle in the event system. This means node will still exit when there are no more event handlers from the main thread. So there's no  need to have a "stop()" function.
-    // this.worker.unref();
+    this.worker.unref();
   }
 
   call(...args: any[]) {
