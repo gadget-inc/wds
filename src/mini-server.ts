@@ -16,6 +16,7 @@ export class Request {
 /** represents a higher level incoming reply */
 export class Reply {
   statusCode: number | null = null;
+
   constructor(readonly raw: http.ServerResponse) {}
 
   async json(value: any) {
@@ -29,6 +30,7 @@ export type RouteHandler = (request: Request, reply: any) => Promise<void> | voi
 /** A teensy HTTP server with built in support for :gasp: routes :gasp: */
 export class MiniServer {
   server?: http.Server;
+  closed = false;
 
   constructor(readonly routes: Record<string, RouteHandler>) {}
 
@@ -46,7 +48,7 @@ export class MiniServer {
         await handler(request, reply);
         if (reply.statusCode) reply.raw.statusCode = reply.statusCode;
       } catch (error) {
-        log.error(error);
+        if (!this.closed) log.error("Error processing handler", error);
         reply.raw.statusCode = 500;
       }
     }
@@ -58,7 +60,7 @@ export class MiniServer {
     this.server = http.createServer((req, res) => {
       const chunks: Uint8Array[] = [];
       req
-        .on("error", (err) => console.error(err))
+        .on("error", (err) => log.debug("Error processing request", err))
         .on("data", (chunk) => chunks.push(chunk))
         .on("end", () => {
           const request = new Request(req, Buffer.concat(chunks).toString("utf-8"));
@@ -73,6 +75,7 @@ export class MiniServer {
   }
 
   close() {
+    this.closed = true;
     this.server?.close();
   }
 }

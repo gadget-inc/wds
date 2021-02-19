@@ -1,4 +1,5 @@
 import { throttle } from "lodash";
+import { log } from "./utils";
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 const http = require("http");
@@ -9,17 +10,22 @@ const { isMainThread } = require("worker_threads");
 
 let pendingRequireNotifications: string[] = [];
 const throttledRequireFlush = throttle(() => {
-  const request = http.request(
-    { socketPath: process.env["ESBUILD_DEV_SOCKET_PATH"]!, path: "/file-required", method: "POST", timeout: 200 },
-    () => {
-      // don't care if it worked
-    },
-    300
-  );
+  try {
+    const request = http.request(
+      { socketPath: process.env["ESBUILD_DEV_SOCKET_PATH"]!, path: "/file-required", method: "POST", timeout: 200 },
+      () => {
+        // don't care if it worked
+      },
+      300
+    );
 
-  request.write(JSON.stringify(pendingRequireNotifications));
-  request.end();
-  pendingRequireNotifications = [];
+    request.write(JSON.stringify(pendingRequireNotifications));
+    request.end();
+    pendingRequireNotifications = [];
+  } catch (error) {
+    // errors sometimes thrown during shutdown process, we don't care
+    log.debug("error flushing require notifications", error);
+  }
 });
 
 const notifyParentProcessOfRequire = (filename: string) => {
