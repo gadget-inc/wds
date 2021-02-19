@@ -22,7 +22,7 @@
     "LICENSE.txt"
   ],
   "scripts": {
-    "build": "rm -rf pkg && tsc",
+    "build": "rm -rf pkg && tsc && chmod +x pkg/esbuild-dev.bin.js",
     "watch": "tsc -w",
     "lint": "yarn run lint:prettier && yarn run lint:eslint",
     "lint:prettier": "node --max-old-space-size=4096 node_modules/.bin/prettier --check \"src/**/*.{js,ts,tsx}\"",
