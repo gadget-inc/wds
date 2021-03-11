@@ -1,4 +1,5 @@
-import esbuild, { BuildIncremental } from "esbuild";
+import type { BuildIncremental } from "esbuild";
+import * as esbuild from "esbuild";
 import findRoot from "find-root";
 import globby from "globby";
 import path from "path";

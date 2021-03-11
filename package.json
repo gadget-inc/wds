@@ -1,6 +1,6 @@
 {
   "name": "esbuild-dev",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "author": "Harry Brundage",
   "license": "MIT",
   "bin": {
@@ -28,7 +28,7 @@
     "lint:prettier": "node --max-old-space-size=4096 node_modules/.bin/prettier --check \"src/**/*.{js,ts,tsx}\"",
     "lint:eslint": "node --max-old-space-size=4096 node_modules/.bin/eslint --quiet --ext ts,tsx src",
     "lint:fix": "node --max-old-space-size=4096 node_modules/.bin/prettier --write --check \"src/**/*.{js,ts,tsx}\" && eslint --ext ts,tsx --fix src",
-    "pkg:build": "tsc"
+    "prelease": "gitpkg publish"
   },
   "dependencies": {
     "chokidar": "^3.4.3",

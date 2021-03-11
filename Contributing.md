@@ -8,10 +8,10 @@ Then gotta use it somewhere, which tends to be easiest in a project. I use `yarn
 
 ## Build the package
 
-Run `yarn pkg:build`
+Run `yarn build`
 
 ## Release the package
 
 Decide what type of new version you're gonna publish and bump the version with `npm version minor|major|patch`
 
-Run `yarn pkg:build && npm publish`
+Run `yarn build && npm publish`

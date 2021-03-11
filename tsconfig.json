@@ -14,7 +14,8 @@
     "target": "es2020",
     "types": ["node"],
     "declaration": true,
-    "outDir": "./pkg"
+    "outDir": "./pkg",
+    "rootDir": "./src"
   },
-  "exclude": ["./pkg"]
+  "include": ["src"]
 }
