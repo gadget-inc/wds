@@ -61,7 +61,6 @@ export class Project {
 
   shutdown(code = 0) {
     this.supervisor.stop();
-    this.compiler.stop();
     for (const cleanup of this.cleanups) {
       cleanup();
     }

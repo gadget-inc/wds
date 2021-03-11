@@ -1,4 +1,4 @@
-import { BuildIncremental, Service, startService } from "esbuild";
+import esbuild, { BuildIncremental } from "esbuild";
 import findRoot from "find-root";
 import globby from "globby";
 import path from "path";
@@ -9,8 +9,6 @@ const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
 
 /** Implements TypeScript building using esbuild */
 export class Compiler {
-  service!: Service;
-
   // a list of incremental esbuilds we're maintaining right now, one for each tsconfig.json / typescript project required by the process
   builds: BuildIncremental[] = [];
 
@@ -24,10 +22,6 @@ export class Compiler {
   groupMap: { [filename: string]: string[] } = {};
 
   constructor(readonly workspaceRoot: string, readonly workDir: string) {}
-
-  async boot() {
-    this.service = await startService();
-  }
 
   /**
    * When a file operation occurs that requires setting up all the esbuild builds again, we run this.
@@ -60,10 +54,6 @@ export class Compiler {
     const files = this.groupMap[filename];
     if (!files) return {};
     return Object.fromEntries(files.map((file) => [file, this.destination(file)]));
-  }
-
-  stop() {
-    this.service.stop();
   }
 
   async rebuild() {
@@ -103,7 +93,7 @@ export class Compiler {
     if (this.rootMap[root]) return;
 
     await this.reportESBuildErrors(async () => {
-      const build = await this.service.build({
+      const build = await esbuild.build({
         entryPoints: [...fileNames],
         incremental: true,
         bundle: false,

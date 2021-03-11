@@ -137,10 +137,7 @@ export const esbuildDev = async (options: RunOptions) => {
   }
 
   const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())));
-
   project.compiler = new Compiler(workspaceRoot, workDir);
-  await project.compiler.boot();
-
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], syncSocketPath, options, project);
 
   if (options.reloadOnChanges) startFilesystemWatcher(project);
