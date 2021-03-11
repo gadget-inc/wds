@@ -1,0 +1,54 @@
+{
+  "name": "esbuild-dev",
+  "version": "0.6.0",
+  "author": "Harry Brundage",
+  "license": "MIT",
+  "bin": {
+    "esbuild-dev": "pkg/esbuild-dev.bin.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gadget-inc/esbuild-dev.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "types": "pkg/index.d.ts",
+  "main": "pkg/index.js",
+  "files": [
+    "pkg/*",
+    "Readme.md",
+    "Contributing.md",
+    "LICENSE.txt"
+  ],
+  "scripts": {
+    "build": "rm -rf pkg && tsc && chmod +x pkg/esbuild-dev.bin.js",
+    "watch": "tsc -w",
+    "lint": "yarn run lint:prettier && yarn run lint:eslint",
+    "lint:prettier": "node --max-old-space-size=4096 node_modules/.bin/prettier --check \"src/**/*.{js,ts,tsx}\"",
+    "lint:eslint": "node --max-old-space-size=4096 node_modules/.bin/eslint --quiet --ext ts,tsx src",
+    "lint:fix": "node --max-old-space-size=4096 node_modules/.bin/prettier --write --check \"src/**/*.{js,ts,tsx}\" && eslint --ext ts,tsx --fix src",
+    "prelease": "gitpkg publish"
+  },
+  "dependencies": {
+    "chokidar": "^3.4.3",
+    "esbuild": "^0.9.0",
+    "find-root": "^1.1.0",
+    "find-yarn-workspace-root": "^2.0.0",
+    "globby": "^11.0.2",
+    "lodash": "^4.17.20",
+    "pkg-dir": "^5.0.0",
+    "yargs": "^16.2.0"
+  },
+  "devDependencies": {
+    "@gadgetinc/eslint-config": "^0.1.1",
+    "@gadgetinc/prettier-config": "^0.1.0",
+    "@types/find-root": "^1.1.2",
+    "@types/lodash": "^4.14.167",
+    "@types/node": "^14.14.14",
+    "@types/yargs": "^15.0.12",
+    "eslint": "^7.15.0",
+    "prettier": "^2.2.1",
+    "typescript": "^4.1.3"
+  }
+}
