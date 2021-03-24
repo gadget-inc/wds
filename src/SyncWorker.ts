@@ -83,7 +83,7 @@ export class SyncWorker {
     this.port.postMessage(call);
 
     // synchronously wait for worker thread to get back to us
-    const status = Atomics.wait(sharedBufferView, 0, 0, 5000);
+    const status = Atomics.wait(sharedBufferView, 0, 0, 20000);
     if (status === "timed-out")
       throw new Error(
         "[esbuild-dev] Internal error: timed out communicating with esbuild-dev sync worker thread, likely an esbuild-dev bug"
