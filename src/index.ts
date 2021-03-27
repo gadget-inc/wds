@@ -39,7 +39,7 @@ export const cli = async () => {
       default: false,
     }).argv;
 
-  return esbuildDev({
+  return await esbuildDev({
     argv: args._ as any,
     terminalCommands: args.commands,
     reloadOnChanges: args.watch,
