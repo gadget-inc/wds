@@ -19,7 +19,7 @@ export class Reply {
 
   constructor(readonly raw: http.ServerResponse) {}
 
-  async json(value: any) {
+  json(value: any) {
     this.raw.setHeader("Content-Type", "application/json");
     this.raw.write(JSON.stringify(value));
   }

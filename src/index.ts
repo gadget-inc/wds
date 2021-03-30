@@ -115,6 +115,8 @@ const startIPCServer = async (socketPath: string, project: Project) => {
       reply.json({ status: "ok" });
     },
   });
+
+  log.debug(`Starting supervisor server at ${socketPath}`);
   await server.start(socketPath);
 
   project.addShutdownCleanup(() => server.close());
@@ -129,20 +131,20 @@ const childProcessArgs = () => {
 export const esbuildDev = async (options: RunOptions) => {
   const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "esbuild-dev"));
-  let syncSocketPath: string;
+  let serverSocketPath: string;
   if (os.platform() === "win32") {
-    syncSocketPath = path.join("\\\\?\\pipe", workDir, "ipc.sock");
+    serverSocketPath = path.join("\\\\?\\pipe", workDir, "ipc.sock");
   } else {
-    syncSocketPath = path.join(workDir, "ipc.sock");
+    serverSocketPath = path.join(workDir, "ipc.sock");
   }
 
   const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())));
   project.compiler = new Compiler(workspaceRoot, workDir);
-  project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], syncSocketPath, options, project);
+  project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
 
   if (options.reloadOnChanges) startFilesystemWatcher(project);
   if (options.terminalCommands) startTerminalCommandListener(project);
-  await startIPCServer(syncSocketPath, project);
+  await startIPCServer(serverSocketPath, project);
 
   // kickoff the first child process
   options.supervise && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
