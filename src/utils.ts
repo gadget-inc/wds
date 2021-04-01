@@ -25,6 +25,9 @@ export const projectConfig = async (root: string): Promise<ProjectConfig> => {
   try {
     await fs.access(location);
     value = require(location);
-  } catch (error) {}
+    log.debug(`Loaded project config from ${location}`);
+  } catch (error) {
+    log.debug(`Error loading project config from ${location}: ${error.message}`);
+  }
   return defaults({}, value, { ignore: [], extensions: [".ts", ".tsx", ".jsx"] });
 };

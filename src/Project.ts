@@ -35,15 +35,15 @@ export class Project {
   }, 15);
 
   async reloadNow() {
-    const message = compact([
-      this.currentBatch.paths[0].replace(this.workspaceRoot, ""),
-      this.currentBatch.paths.length > 1 && ` and ${this.currentBatch.paths.length - 1} others`,
-      " changed, ",
-      this.currentBatch.invalidate && "reinitializing and ",
-      "restarting ...",
-    ]);
-
-    log.info(message.join(""));
+    log.info(
+      compact([
+        this.currentBatch.paths[0].replace(this.workspaceRoot, ""),
+        this.currentBatch.paths.length > 1 && ` and ${this.currentBatch.paths.length - 1} others`,
+        " changed, ",
+        this.currentBatch.invalidate && "reinitializing and ",
+        "restarting ...",
+      ]).join("")
+    );
     const invalidate = this.currentBatch.invalidate;
     this.currentBatch = { paths: [], invalidate: false };
     if (invalidate) {
