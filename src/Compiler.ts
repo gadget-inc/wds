@@ -14,13 +14,16 @@ export class Compiler {
   builds: BuildIncremental[] = [];
 
   // a map from filename to which build is responsible for it
-  fileMap: { [filename: string]: BuildIncremental } = {};
+  fileToBuildMap: { [filename: string]: BuildIncremental } = {};
 
   // a map from a tsconfig file to which build is responsible for it
-  rootMap: { [filename: string]: BuildIncremental } = {};
+  rootToBuildMap: { [filename: string]: BuildIncremental } = {};
 
   // a map from filename to which group of files are being built alongside it
-  groupMap: { [filename: string]: string[] } = {};
+  fileToGroupMap: { [filename: string]: string[] } = {};
+
+  // a map from absolute input filename to absolute output filename
+  fileToDestinationMap: { [filename: string]: string } = {};
 
   constructor(readonly workspaceRoot: string, readonly workDir: string) {}
 
@@ -36,8 +39,8 @@ export class Compiler {
   async invalidateBuildSet() {
     await Promise.all(this.builds.map((build) => build.rebuild.dispose()));
     this.builds = [];
-    this.fileMap = {};
-    this.rootMap = {};
+    this.fileToBuildMap = {};
+    this.rootToBuildMap = {};
   }
 
   /**
@@ -52,7 +55,7 @@ export class Compiler {
    * For a given input filename, return all the destinations of the files compiled alongside it in it's compilation group
    **/
   fileGroup(filename: string) {
-    const files = this.groupMap[filename];
+    const files = this.fileToGroupMap[filename];
     if (!files) return {};
     return Object.fromEntries(files.map((file) => [file, this.destination(file)]));
   }
@@ -89,25 +92,27 @@ export class Compiler {
    * If a file is part of a project we've seen before, it's a no-op.
    **/
   private async startBuilding(filename: string) {
-    if (this.fileMap[filename]) return;
+    if (this.fileToBuildMap[filename]) return;
     const { root, fileNames, config } = await this.getModule(filename);
-    if (this.rootMap[root]) return;
+    if (this.rootToBuildMap[root]) return;
 
     await this.reportESBuildErrors(async () => {
       const build = await esbuild.build({
+        absWorkingDir: root,
         entryPoints: [...fileNames],
+        outdir: this.workDir,
+        outbase: this.workspaceRoot,
         incremental: true,
+        metafile: true,
         bundle: false,
         platform: "node",
         format: "cjs",
         target: ["node14"],
-        outdir: this.workDir,
-        outbase: this.workspaceRoot,
         sourcemap: "inline",
         ...(config.esbuild as Record<string, any>),
       });
 
-      this.rootMap[root] = build;
+      this.rootToBuildMap[root] = build;
 
       log.debug("started build", {
         root,
@@ -118,8 +123,14 @@ export class Compiler {
       this.builds.push(build);
 
       for (const file of fileNames) {
-        this.fileMap[file] = build;
-        this.groupMap[file] = fileNames;
+        this.fileToBuildMap[file] = build;
+        this.fileToGroupMap[file] = fileNames;
+      }
+
+      for (const [output, details] of Object.entries(build.metafile!.outputs)) {
+        if (details.entryPoint) {
+          this.fileToDestinationMap[path.join(root, details.entryPoint)] = path.resolve(output);
+        }
       }
 
       return fileNames;
@@ -134,15 +145,11 @@ export class Compiler {
     }
   }
 
-  private destination = (filename: string) => {
-    // make path relative to the workspace root
-    let dest = filename.replace(this.workspaceRoot, "");
-    // strip the original extension and replace with .js
-    const extension = path.extname(dest);
-    if (extension != ".js") {
-      dest = dest.slice(0, dest.length - extension.length) + ".js";
+  private destination(filename: string) {
+    const result = this.fileToDestinationMap[filename];
+    if (!result) {
+      throw new Error(`Built output for file ${filename} not found`);
     }
-
-    return path.join(this.workDir, dest);
-  };
+    return result;
+  }
 }
