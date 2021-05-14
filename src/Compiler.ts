@@ -108,7 +108,7 @@ export class Compiler {
         platform: "node",
         format: "cjs",
         target: ["node14"],
-        sourcemap: "inline",
+        sourcemap: true,
         ...(config.esbuild as Record<string, any>),
       });
 
