@@ -157,7 +157,7 @@ export const esbuildDev = async (options: RunOptions) => {
   project.supervisor.process.on("exit", (code) => {
     log.debug(`child process exited with code ${code}, ${options.supervise ? "not exiting because supervise mode" : "exiting..."}`);
     if (!options.supervise) {
-      project.shutdown(code || 0);
+      project.shutdown(code ?? 1);
     }
   });
 };
