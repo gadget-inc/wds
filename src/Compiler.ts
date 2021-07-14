@@ -75,7 +75,7 @@ export class Compiler {
     const config = await projectConfig(root);
     const extensions = config.esbuild?.resolveExtensions || DefaultExtensions;
 
-    const globs = [`**/*{${extensions.join(",")}}`, `!node_modules`, ...(config.ignore || []).map((ignore) => `!${ignore}`)];
+    const globs = [`**/*{${extensions.join(",")}}`, `!node_modules`, `!**/*.d.ts`, ...(config.ignore || []).map((ignore) => `!${ignore}`)];
     log.debug("searching for filenames", { config, root, globs });
 
     let fileNames = await globby(globs, { cwd: root, absolute: true });
