@@ -3,7 +3,7 @@ import { promises as fs } from "fs";
 import workerThreads, { MessageChannel, MessagePort, receiveMessageOnPort, Worker } from "worker_threads";
 import { log } from "./utils";
 
-log.debug("syncworker file boot", { isMainThread: workerThreads.isMainThread });
+log.debug("syncworker file boot", { isMainThread: workerThreads.isMainThread, hasWorkerData: !!workerThreads.workerData });
 
 interface SyncWorkerCall {
   id: number;
@@ -17,7 +17,8 @@ interface SyncWorkerResponse {
   error: null | any;
 }
 
-interface SyncWorkerData {
+export interface SyncWorkerData {
+  isESBuildDevWorker: true;
   scriptPath: string;
   port: MessagePort;
 }
@@ -40,6 +41,7 @@ export class SyncWorker {
     const workerData: SyncWorkerData = {
       scriptPath,
       port: port2,
+      isESBuildDevWorker: true,
     };
 
     this.worker = new Worker(__filename, {
@@ -113,6 +115,8 @@ if (!workerThreads.isMainThread) {
     // try to be immune to https://github.com/nodejs/node/issues/36531
     const workerData: SyncWorkerData | undefined = workerThreads.workerData;
     if (!workerData) return setImmediate(runWorker as any); // eslint-disable-line @typescript-eslint/no-implied-eval
+    if (!workerData.isESBuildDevWorker) return;
+
     const file = process.env["ESBUILD_DEV_DEBUG"] ? await fs.open("/tmp/esbuild-dev-debug-log.txt", "w") : undefined;
     const implementation = require(workerData.scriptPath); // eslint-disable-line @typescript-eslint/no-var-requires
     const port: MessagePort = workerData.port;

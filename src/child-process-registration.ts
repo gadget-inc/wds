@@ -1,4 +1,5 @@
 import { throttle } from "lodash";
+import { SyncWorkerData } from "./SyncWorker";
 import { log } from "./utils";
 
 /* eslint-disable @typescript-eslint/no-var-requires */
@@ -6,7 +7,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { SyncWorker } = require("./SyncWorker");
-const { isMainThread } = require("worker_threads");
+const { workerData } = require("worker_threads");
 
 let pendingRequireNotifications: string[] = [];
 const throttledRequireFlush = throttle(() => {
@@ -33,7 +34,7 @@ const notifyParentProcessOfRequire = (filename: string) => {
   void throttledRequireFlush();
 };
 
-if (isMainThread) {
+if (!workerData || !(workerData as SyncWorkerData).isESBuildDevWorker) {
   const worker = new SyncWorker(path.join(__dirname, "child-process-ipc-worker.js"));
   const paths: Record<string, string> = {};
 
