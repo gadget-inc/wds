@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "chokidar": "^3.4.3",
-    "esbuild": "^0.12.5",
+    "esbuild": "^0.13.4",
     "find-root": "^1.1.0",
     "find-yarn-workspace-root": "^2.0.0",
     "globby": "^11.0.2",
