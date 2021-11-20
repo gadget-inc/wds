@@ -113,6 +113,7 @@ export class Compiler {
         format: "cjs",
         target: ["node14"],
         sourcemap: true,
+        sourceRoot: this.workDir,
         ...(config.esbuild as Record<string, any>),
       });
 

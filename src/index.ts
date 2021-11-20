@@ -56,7 +56,7 @@ const startTerminalCommandListener = (project: Project) => {
 
   reader.on("line", (line: string) => {
     if (line.trim() === "rs") {
-      log.info("Restart command recieved, restarting...");
+      log.info("Restart command received, restarting...");
       void project.invalidateBuildSetAndReload();
     }
   });
@@ -131,6 +131,8 @@ const childProcessArgs = () => {
 export const esbuildDev = async (options: RunOptions) => {
   const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "esbuild-dev"));
+  log.debug(`starting esbuild-dev for workspace root ${workspaceRoot} and workdir ${workDir}`);
+
   let serverSocketPath: string;
   if (os.platform() === "win32") {
     serverSocketPath = path.join("\\\\?\\pipe", workDir, "ipc.sock");
