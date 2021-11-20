@@ -3,7 +3,7 @@ import { defaults } from "lodash";
 import path from "path";
 import { ProjectConfig } from "./Options";
 
-const logPrefix = "[esbuild-dev]";
+const logPrefix = `[esbuild-dev pid=${process.pid}]`;
 export const log = {
   debug: (...args: any[]) => process.env["ESBUILD_DEV_DEBUG"] && console.warn(logPrefix, ...args),
   info: (...args: any[]) => console.warn(logPrefix, ...args),

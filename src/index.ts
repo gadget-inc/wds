@@ -151,6 +151,11 @@ export const esbuildDev = async (options: RunOptions) => {
   await project.invalidateBuildSetAndReload();
 
   process.on("SIGINT", () => {
+    log.debug(`process ${process.pid} got SIGINT`);
+    project.shutdown(0);
+  });
+  process.on("SIGTERM", () => {
+    log.debug(`process ${process.pid} got SIGTERM`);
     project.shutdown(0);
   });
 
