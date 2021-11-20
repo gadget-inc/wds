@@ -19,10 +19,8 @@ jobs:
         cache: 'yarn'
     - run: yarn install
     - run: yarn build
-    - run: test/simple/test.sh | grep "IT WORKED"
-    - run: test/oom/test.sh 2>&1 | grep "ReportOOMFailure"
-    - run: test/server/test.sh
-    - run: test/reload/test.sh
+    - run: test/test.sh
+    
 
   lint:
     runs-on: ubuntu-latest
