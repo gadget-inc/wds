@@ -97,7 +97,7 @@ const startIPCServer = async (socketPath: string, project: Project) => {
     try {
       await project.compiler.compile(filename);
       project.watcher?.add(filename);
-      return project.compiler.fileGroup(filename);
+      return await project.compiler.fileGroup(filename);
     } catch (error) {
       log.error(`Error compiling file ${filename}:`, error);
     }
