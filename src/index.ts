@@ -125,7 +125,7 @@ const startIPCServer = async (socketPath: string, project: Project) => {
 };
 
 const childProcessArgs = () => {
-  return ["-r", path.join(__dirname, "child-process-registration.js")];
+  return ["-r", path.join(__dirname, "child-process-registration.js"), "--enable-source-maps"];
 };
 
 export const esbuildDev = async (options: RunOptions) => {
