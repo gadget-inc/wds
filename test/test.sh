@@ -9,7 +9,7 @@ echo "::endgroup::"
 echo
 
 echo "::group::OOM test"
-$DIR/oom/test.sh 2>&1 | grep "ReportOOMFailure"
+$DIR/oom/test.sh 
 echo "::endgroup::"
 echo
 

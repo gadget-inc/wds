@@ -21,13 +21,16 @@ export const time = async <T extends any>(run: () => Promise<T>) => {
 
 export const projectConfig = async (root: string): Promise<ProjectConfig> => {
   const location = path.join(root, "esbuild-dev.js");
-  let value = {};
+  const value = { ignore: [], extensions: [".ts", ".tsx", ".jsx"] };
   try {
     await fs.access(location);
-    value = require(location);
-    log.debug(`Loaded project config from ${location}`);
-  } catch (error) {
-    log.debug(`Error loading project config from ${location}: ${error.message}`);
+  } catch (error: any) {
+    log.debug(`Not loading project config from ${location}, error encountered: ${error.message}`);
+    return value;
   }
-  return defaults({}, value, { ignore: [], extensions: [".ts", ".tsx", ".jsx"] });
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const required = require(location);
+  log.debug(`Loaded project config from ${location}`);
+  return defaults(required, value);
 };
