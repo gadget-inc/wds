@@ -5,26 +5,24 @@ import globby from "globby";
 import path from "path";
 import { ProjectConfig } from "./Options";
 import { log, projectConfig, time } from "./utils";
+import * as fs from "fs/promises";
 
 // https://esbuild.github.io/api/#resolve-extensions
 const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
 
 /** Implements TypeScript building using esbuild */
 export class Compiler {
-  // a list of incremental esbuilds we're maintaining right now, one for each tsconfig.json / typescript project required by the process
-  builds: BuildIncremental[] = [];
-
   // a map from filename to which build is responsible for it
   fileToBuildMap: { [filename: string]: BuildIncremental } = {};
 
   // a map from a tsconfig file to which build is responsible for it
-  rootToBuildMap: { [filename: string]: BuildIncremental } = {};
+  rootToBuildMap: Map<string, BuildIncremental> = new Map();
 
   // a map from filename to which group of files are being built alongside it
   fileToGroupMap: { [filename: string]: string[] } = {};
 
   // a map from absolute input filename to absolute output filename
-  fileToDestinationMap: { [filename: string]: string } = {};
+  fileToContentMap: { [filename: string]: string } = {};
 
   constructor(readonly workspaceRoot: string, readonly workDir: string) {}
 
@@ -38,10 +36,9 @@ export class Compiler {
    * The set of files being built changing causes a reset because esbuild is only incremental over the exact same set of input options passed to it, which includes the files. So we need
    */
   async invalidateBuildSet() {
-    await Promise.all(this.builds.map((build) => build.rebuild.dispose()));
-    this.builds = [];
+    await Promise.all(Array.from(this.rootToBuildMap.values()).map((build) => build.rebuild.dispose()));
     this.fileToBuildMap = {};
-    this.rootToBuildMap = {};
+    this.rootToBuildMap = new Map();
   }
 
   /**
@@ -67,7 +64,12 @@ export class Compiler {
 
   async rebuild() {
     const duration = await time(async () => {
-      await Promise.all(this.builds.map((build) => this.reportESBuildErrors(() => build.rebuild())));
+      const promises =
+        Array.from(this.rootToBuildMap.entries()).map(async ([root, build]) => {
+          await build.rebuild();
+          await this.loadFiles(root, build)
+        })
+      await Promise.all(promises)
     });
 
     log.debug("rebuild", {
@@ -98,7 +100,7 @@ export class Compiler {
   private async startBuilding(filename: string) {
     if (this.fileToBuildMap[filename]) return;
     const { root, fileNames, config } = await this.getModule(filename);
-    if (this.rootToBuildMap[root]) return;
+    if (this.rootToBuildMap.get(root)) return;
 
     await this.reportESBuildErrors(async () => {
       const build = await esbuild.build({
@@ -116,7 +118,7 @@ export class Compiler {
         ...(config.esbuild as Record<string, any>),
       });
 
-      this.rootToBuildMap[root] = build;
+      this.rootToBuildMap.set(root, build);
 
       log.debug("started build", {
         root,
@@ -124,21 +126,29 @@ export class Compiler {
         files: fileNames.length,
       });
 
-      this.builds.push(build);
-
       for (const file of fileNames) {
         this.fileToBuildMap[file] = build;
         this.fileToGroupMap[file] = fileNames;
       }
 
-      for (const [output, details] of Object.entries(build.metafile!.outputs)) {
-        if (details.entryPoint) {
-          this.fileToDestinationMap[path.join(root, details.entryPoint)] = path.resolve(output);
-        }
-      }
+      await this.loadFiles(root, build);
 
       return fileNames;
     });
+  }
+
+  private async loadFiles(root: string, build: BuildIncremental) {
+    const promises =
+      Object
+        .entries(build.metafile!.outputs)
+        .map(async ([output, details]) => {
+          if (details.entryPoint) {
+            // TODO: Treating files as UTF-8 is incorrect as JS strings don't have to fit in the UTF-8 space.
+            this.fileToContentMap[path.join(root, details.entryPoint)] = await fs.readFile(path.resolve(output), "utf-8");
+          }
+        })
+
+    return await Promise.all(promises);
   }
 
   private async reportESBuildErrors<T>(run: () => Promise<T>) {
@@ -150,7 +160,7 @@ export class Compiler {
   }
 
   private async destination(filename: string) {
-    const result = this.fileToDestinationMap[filename];
+    const result = this.fileToContentMap[filename];
     if (!result) {
       const ignorePattern = await this.isFilenameIgnored(filename);
 

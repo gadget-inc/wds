@@ -62,8 +62,7 @@ if (!workerData || !(workerData as SyncWorkerData).isESBuildDevWorker) {
   // We don't do the best practice of chaining module._compile calls because esbuild won't know about any of the stuff any of the other extensions might do, so running them wouldn't do anything. esbuild-dev must then be the first registered extension.
   for (const extension of process.env["ESBUILD_DEV_EXTENSIONS"]!.split(",")) {
     require.extensions[extension] = (module: any, filename: string) => {
-      const compiledFilename = compile(filename);
-      const content = fs.readFileSync(compiledFilename, "utf8");
+      const content = compile(filename);
       notifyParentProcessOfRequire(filename);
       module._compile(content, filename);
     };
