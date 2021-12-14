@@ -1,22 +1,23 @@
-import type { BuildIncremental } from "esbuild";
+import type {BuildResult, Metafile, OutputFile} from "esbuild";
 import * as esbuild from "esbuild";
 import findRoot from "find-root";
 import globby from "globby";
 import path from "path";
 import { ProjectConfig } from "./Options";
 import { log, projectConfig, time } from "./utils";
-import * as fs from "fs/promises";
 
 // https://esbuild.github.io/api/#resolve-extensions
 const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
 
+type Build = BuildResult & { outputFiles: OutputFile[], metafile: Metafile };
+
 /** Implements TypeScript building using esbuild */
 export class Compiler {
   // a map from filename to which build is responsible for it
-  fileToBuildMap: { [filename: string]: BuildIncremental } = {};
+  fileToBuildMap: { [filename: string]: Build } = {};
 
   // a map from a tsconfig file to which build is responsible for it
-  rootToBuildMap: Map<string, BuildIncremental> = new Map();
+  rootToBuildMap: Map<string, Build> = new Map();
 
   // a map from filename to which group of files are being built alongside it
   fileToGroupMap: { [filename: string]: string[] } = {};
@@ -36,7 +37,7 @@ export class Compiler {
    * The set of files being built changing causes a reset because esbuild is only incremental over the exact same set of input options passed to it, which includes the files. So we need
    */
   async invalidateBuildSet() {
-    await Promise.all(Array.from(this.rootToBuildMap.values()).map((build) => build.rebuild.dispose()));
+    await Promise.all(Array.from(this.rootToBuildMap.values()).map((build) => build.rebuild!.dispose()));
     this.fileToBuildMap = {};
     this.rootToBuildMap = new Map();
   }
@@ -66,8 +67,8 @@ export class Compiler {
     const duration = await time(async () => {
       const promises =
         Array.from(this.rootToBuildMap.entries()).map(async ([root, build]) => {
-          await build.rebuild();
-          await this.loadFiles(root, build)
+          const newBuild = await build.rebuild!() as Build;
+          await this.mapFileContent(root, newBuild)
         })
       await Promise.all(promises)
     });
@@ -115,8 +116,9 @@ export class Compiler {
         format: "cjs",
         target: ["node14"],
         sourcemap: "inline",
+        write: false,
         ...(config.esbuild as Record<string, any>),
-      });
+      }) as Build;
 
       this.rootToBuildMap.set(root, build);
 
@@ -131,20 +133,25 @@ export class Compiler {
         this.fileToGroupMap[file] = fileNames;
       }
 
-      await this.loadFiles(root, build);
+      await this.mapFileContent(root, build);
 
       return fileNames;
     });
   }
 
-  private async loadFiles(root: string, build: BuildIncremental) {
+  private async mapFileContent(root: string, build: Build) {
+    const buildFileMap: Map<string, OutputFile> = new Map();
+    build.outputFiles.forEach((file) => {
+      buildFileMap.set(file.path, file);
+    });
+
     const promises =
       Object
-        .entries(build.metafile!.outputs)
+        .entries(build.metafile.outputs)
         .map(async ([output, details]) => {
           if (details.entryPoint) {
             // TODO: Treating files as UTF-8 is incorrect as JS strings don't have to fit in the UTF-8 space.
-            this.fileToContentMap[path.join(root, details.entryPoint)] = await fs.readFile(path.resolve(output), "utf-8");
+            this.fileToContentMap[path.join(root, details.entryPoint)] = buildFileMap.get(path.resolve(output))!.text;
           }
         })
 
