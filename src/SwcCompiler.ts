@@ -1,8 +1,6 @@
 import { Output, transformFile } from "@swc/core";
 import findRoot from "find-root";
-import * as fs from "fs";
 import globby from "globby";
-import path from "path";
 import { ProjectConfig } from "./Options";
 import { log, projectConfig } from "./utils";
 
@@ -62,6 +60,15 @@ export class SwcCompiler {
    * Start compiling a new file at `filename`. Returns the destination that file's compiled output will be found at in the workdir
    **/
   async compile(filename: string) {
+    const existingGroup = this.compiledFiles.group(filename);
+
+    if (existingGroup) {
+      await this.buildFile(filename, existingGroup.root);
+    } else {
+      await this.buildGroup(filename);
+    }
+
+    return this.compiledFiles.group(filename)!;
     return await this.buildGroup(filename);
   }
 
@@ -106,7 +113,7 @@ export class SwcCompiler {
    *
    */
   private async buildFile(filename: string, root: string): Promise<CompiledFile> {
-    return await transformFile(filename, {
+    const file = await transformFile(filename, {
       cwd: root,
       filename: filename,
       root: this.workspaceRoot,
@@ -133,37 +140,29 @@ export class SwcCompiler {
     }).then((output) => {
       return { filename, root, ...output } as CompiledFile;
     });
+
+    this.compiledFiles.addFile(file);
+
+    return file;
   }
 
   /**
    * Build the group of files at the specified path.
    * If the group has already been built, build only the specified file.
    */
-  private async buildGroup(filename: string): Promise<Group> {
-    const existingGroup = this.compiledFiles.group(filename);
+  private async buildGroup(filename: string): Promise<void> {
+    // TODO: Use the config
+    const { root, fileNames, config } = await this.getModule(filename);
 
-    if (existingGroup) {
-      const file = await this.buildFile(filename, existingGroup.root);
-      this.compiledFiles.addFile(file);
-    } else {
-      const { root, fileNames, config } = await this.getModule(filename);
+    await this.reportErrors(async () => {
+      await Promise.all(fileNames.map((filename) => this.buildFile(filename, root)));
+    });
 
-      await this.reportErrors(async () => {
-        await Promise.all(
-          fileNames.map((filename) => {
-            return this.buildFile(filename, root).then((file) => this.compiledFiles.addFile(file));
-          })
-        );
-      });
-
-      log.debug("started build", {
-        root,
-        promptedBy: filename,
-        files: fileNames.length,
-      });
-    }
-
-    return this.compiledFiles.group(filename)!;
+    log.debug("started build", {
+      root,
+      promptedBy: filename,
+      files: fileNames.length,
+    });
   }
 
   private async reportErrors<T>(run: () => Promise<T>) {
