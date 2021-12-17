@@ -7,11 +7,11 @@ import path from "path";
 import readline from "readline";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { Compiler } from "./Compiler";
 import { MiniServer } from "./mini-server";
 import { RunOptions } from "./Options";
 import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
+import { SwcCompiler } from "./SwcCompiler";
 import { log, projectConfig } from "./utils";
 
 export const cli = async () => {
@@ -141,7 +141,8 @@ export const esbuildDev = async (options: RunOptions) => {
   }
 
   const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())));
-  project.compiler = new Compiler(workspaceRoot, workDir);
+  // project.compiler = new Compiler(workspaceRoot, workDir);
+  project.compiler = new SwcCompiler(workspaceRoot);
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
 
   if (options.reloadOnChanges) startFilesystemWatcher(project);
