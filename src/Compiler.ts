@@ -1,4 +1,4 @@
-import type {BuildResult, Metafile, OutputFile} from "esbuild";
+import type { BuildResult, Metafile, OutputFile } from "esbuild";
 import * as esbuild from "esbuild";
 import findRoot from "find-root";
 import globby from "globby";
@@ -9,7 +9,7 @@ import { log, projectConfig, time } from "./utils";
 // https://esbuild.github.io/api/#resolve-extensions
 const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
 
-type Build = BuildResult & { outputFiles: OutputFile[], metafile: Metafile };
+type Build = BuildResult & { outputFiles: OutputFile[]; metafile: Metafile };
 
 /** Implements TypeScript building using esbuild */
 export class Compiler {
@@ -65,12 +65,11 @@ export class Compiler {
 
   async rebuild() {
     const duration = await time(async () => {
-      const promises =
-        Array.from(this.rootToBuildMap.entries()).map(async ([root, build]) => {
-          const newBuild = await build.rebuild!() as Build;
-          await this.mapFileContent(root, newBuild)
-        })
-      await Promise.all(promises)
+      const promises = Array.from(this.rootToBuildMap.entries()).map(async ([root, build]) => {
+        const newBuild = (await build.rebuild!()) as Build;
+        await this.mapFileContent(root, newBuild);
+      });
+      await Promise.all(promises);
     });
 
     log.debug("rebuild", {
@@ -104,7 +103,7 @@ export class Compiler {
     if (this.rootToBuildMap.get(root)) return;
 
     await this.reportESBuildErrors(async () => {
-      const build = await esbuild.build({
+      const build = (await esbuild.build({
         absWorkingDir: root,
         entryPoints: [...fileNames],
         outdir: this.workDir,
@@ -118,7 +117,7 @@ export class Compiler {
         sourcemap: "inline",
         write: false,
         ...(config.esbuild as Record<string, any>),
-      }) as Build;
+      })) as Build;
 
       this.rootToBuildMap.set(root, build);
 
@@ -145,15 +144,12 @@ export class Compiler {
       buildFileMap.set(file.path, file);
     });
 
-    const promises =
-      Object
-        .entries(build.metafile.outputs)
-        .map(async ([output, details]) => {
-          if (details.entryPoint) {
-            // TODO: Treating files as UTF-8 is incorrect as JS strings don't have to fit in the UTF-8 space.
-            this.fileToContentMap[path.join(root, details.entryPoint)] = buildFileMap.get(path.resolve(output))!.text;
-          }
-        })
+    const promises = Object.entries(build.metafile.outputs).map(async ([output, details]) => {
+      if (details.entryPoint) {
+        // TODO: Treating files as UTF-8 is incorrect as JS strings don't have to fit in the UTF-8 space.
+        this.fileToContentMap[path.join(root, details.entryPoint)] = buildFileMap.get(path.resolve(output))!.text;
+      }
+    });
 
     return await Promise.all(promises);
   }
