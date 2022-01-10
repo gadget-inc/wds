@@ -1,6 +1,7 @@
 import { Output, transformFile } from "@swc/core";
 import findRoot from "find-root";
 import globby from "globby";
+import { Compiler } from "./Compiler";
 import { ProjectConfig } from "./Options";
 import { log, projectConfig } from "./utils";
 
@@ -37,28 +38,16 @@ class CompiledFiles {
 }
 
 /** Implements TypeScript building using esbuild */
-export class SwcCompiler {
+export class SwcCompiler implements Compiler {
   private compiledFiles: CompiledFiles;
   constructor(readonly workspaceRoot: string) {
     this.compiledFiles = new CompiledFiles();
   }
 
-  /**
-   * When a file operation occurs that requires setting up all the esbuild builds again, we run this.
-   * The operations that should cause an invalidation are:
-   *  - a change in the tsconfig.json
-   *  - any new file being added
-   *  - any existing file being deleted
-   *
-   * The set of files being built changing causes a reset because esbuild is only incremental over the exact same set of input options passed to it, which includes the files. So we need
-   */
   async invalidateBuildSet() {
     this.compiledFiles = new CompiledFiles();
   }
 
-  /**
-   * Start compiling a new file at `filename`. Returns the destination that file's compiled output will be found at in the workdir
-   **/
   async compile(filename: string) {
     const existingGroup = this.compiledFiles.group(filename);
 
@@ -68,13 +57,9 @@ export class SwcCompiler {
       await this.buildGroup(filename);
     }
 
-    return this.compiledFiles.group(filename)!;
-    return await this.buildGroup(filename);
+    return (this.compiledFiles.group(filename)! as unknown) as void;
   }
 
-  /**
-   * For a given input filename, return all the destinations of the files compiled alongside it in it's compilation group
-   **/
   async fileGroup(filename: string) {
     const contents: Record<string, string> = {};
     const group = this.compiledFiles.group(filename);
@@ -86,11 +71,8 @@ export class SwcCompiler {
     for (const file of group.files) {
       contents[file.filename] = file.code;
     }
-    return contents;
-  }
 
-  async rebuild() {
-    // TODO: Eagerly rebuild all existing groups?
+    return contents;
   }
 
   private async getModule(filename: string) {
@@ -109,9 +91,6 @@ export class SwcCompiler {
     return { root, fileNames, config };
   }
 
-  /**
-   *
-   */
   private async buildFile(filename: string, root: string): Promise<CompiledFile> {
     const file = await transformFile(filename, {
       cwd: root,
@@ -180,12 +159,7 @@ export class SwcCompiler {
     if (ignorePattern) {
       return `File ${filename} is imported but not being built because it is explicitly ignored in the esbuild-dev project config. It is being ignored by the provided glob pattern '${ignorePattern}', remove this pattern from the project config or don't import this file to fix.`;
     } else {
-      return `Built output for file ${filename} not found.`;
-      // `Built output for file ${filename} not found. ${
-      //   this.fileToGroupMap[filename]
-      //     ? "File is being built but no output was produced."
-      //     : "File is not being built, is it outside the project directory?"
-      // }`
+      return `Built output for file ${filename} not found. Is it outside the project directory?`;
     }
   }
 

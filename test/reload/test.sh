@@ -9,7 +9,7 @@ trap "kill -9 0" INT TERM
 trap 'kill $(jobs -p)' EXIT
 
 # run a server in the background
-$DIR/../../pkg/esbuild-dev.bin.js --supervise --commands $DIR/run-scratch.ts &
+$DIR/../../pkg/esbuild-dev.bin.js $@ --supervise --commands $DIR/run-scratch.ts &
 
 max_retry=5
 counter=0
@@ -26,7 +26,7 @@ done
 echo "Made initial request to server"
 
 # modify it and expect it to start serving the new contents
-sed -i 's/Hello, World/Hey Pluto/g' $DIR/run-scratch.ts
+sed -i 's/Hello, World/Hey, Pluto/g' $DIR/run-scratch.ts
 
 counter=0
 until curl -s localhost:8080 | grep "Pluto"
