@@ -116,7 +116,7 @@ export class SwcCompiler implements Compiler {
       },
       module: {
         type: "commonjs",
-        // lazy: true,
+        lazy: true,
       },
     }).then(async (output): Promise<CompiledFile> => {
       const destination = path.join(this.outDir, filename);
