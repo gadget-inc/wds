@@ -46,11 +46,15 @@ export class EsBuildCompiler implements Compiler {
   }
 
   /**
-   * Start compiling a new file at `filename`. Returns the destination that file's compiled output will be found at in the workdir
+   * Start compiling a new file at `filename`.
    **/
   async compile(filename: string): Promise<void> {
-    await this.startBuilding(filename);
-    await this.rebuild();
+    const build = this.fileToBuildMap[filename];
+    if (build) {
+      await build.rebuild();
+    } else {
+      await this.startBuilding(filename);
+    }
     return;
   }
 
