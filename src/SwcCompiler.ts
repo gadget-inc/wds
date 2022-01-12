@@ -115,6 +115,7 @@ export class SwcCompiler implements Compiler {
       module: {
         type: "commonjs",
         lazy: true,
+        strictMode: false,
       },
     }).then((output) => {
       return { filename, root, ...output } as CompiledFile;
