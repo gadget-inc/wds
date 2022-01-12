@@ -51,7 +51,7 @@ export class EsBuildCompiler implements Compiler {
   async compile(filename: string): Promise<void> {
     await this.startBuilding(filename);
     await this.rebuild();
-    return
+    return;
   }
 
   /**

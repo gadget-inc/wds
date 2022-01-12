@@ -1,11 +1,11 @@
-import { Output, transformFile } from "@swc/core";
+import { transformFile } from "@swc/core";
 import findRoot from "find-root";
+import * as fs from "fs/promises";
 import globby from "globby";
+import path from "path";
 import { Compiler } from "./Compiler";
 import { ProjectConfig } from "./Options";
 import { log, projectConfig } from "./utils";
-import * as fs from "fs/promises";
-import path from "path";
 
 // https://esbuild.github.io/api/#resolve-extensions
 const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
@@ -59,7 +59,7 @@ export class SwcCompiler implements Compiler {
       await this.buildGroup(filename);
     }
 
-    return
+    return;
   }
 
   async fileGroup(filename: string) {
@@ -118,12 +118,14 @@ export class SwcCompiler implements Compiler {
         type: "commonjs",
         lazy: true,
       },
-    }).then(async (output): Promise<CompiledFile> => {
-      const destination = path.join(this.outDir, filename);
-      await fs.mkdir(path.dirname(destination), { recursive: true })
-      await fs.writeFile(destination, output.code);
-      return { filename, root, destination };
-    });
+    }).then(
+      async (output): Promise<CompiledFile> => {
+        const destination = path.join(this.outDir, filename);
+        await fs.mkdir(path.dirname(destination), { recursive: true });
+        await fs.writeFile(destination, output.code);
+        return { filename, root, destination };
+      }
+    );
 
     this.compiledFiles.addFile(file);
 

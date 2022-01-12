@@ -147,9 +147,7 @@ export const esbuildDev = async (options: RunOptions) => {
     serverSocketPath = path.join(workDir, "ipc.sock");
   }
 
-  const compiler = options.useSwc ?
-    new SwcCompiler(workspaceRoot, workDir) :
-    new EsBuildCompiler(workspaceRoot, workDir);
+  const compiler = options.useSwc ? new SwcCompiler(workspaceRoot, workDir) : new EsBuildCompiler(workspaceRoot, workDir);
   const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())), compiler);
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
 
