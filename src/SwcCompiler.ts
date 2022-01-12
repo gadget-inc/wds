@@ -21,6 +21,14 @@ class CompiledFiles {
     this.groups = new Map();
   }
 
+  removeFile(filename: string) {
+    for (const [root, files] of this.groups.entries()) {
+      if (files.get(filename)) {
+        files.delete(filename);
+      }
+    }
+  }
+
   addFile(file: CompiledFile) {
     let group = this.groups.get(file.root);
     if (!group) {
@@ -39,11 +47,13 @@ class CompiledFiles {
   }
 }
 
-/** Implements TypeScript building using esbuild */
+/** Implements TypeScript building using swc */
 export class SwcCompiler implements Compiler {
   private compiledFiles: CompiledFiles;
+  private invalidatedFiles: Set<string>;
   constructor(readonly workspaceRoot: string, readonly outDir: string) {
     this.compiledFiles = new CompiledFiles();
+    this.invalidatedFiles = new Set();
   }
 
   async invalidateBuildSet() {
@@ -207,5 +217,19 @@ export class SwcCompiler implements Compiler {
     }
 
     return false;
+  }
+
+  invalidate(filename: string): void {
+    this.invalidatedFiles.add(filename);
+    this.compiledFiles.removeFile(filename);
+  }
+
+  async rebuild(): Promise<void> {
+    await Promise.all(
+      Array.from(this.invalidatedFiles).map((filename) => {
+        return this.compile(filename);
+      })
+    );
+    return;
   }
 }

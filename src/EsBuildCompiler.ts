@@ -49,12 +49,8 @@ export class EsBuildCompiler implements Compiler {
    * Start compiling a new file at `filename`.
    **/
   async compile(filename: string): Promise<void> {
-    const build = this.fileToBuildMap[filename];
-    if (build) {
-      await build.rebuild();
-    } else {
-      await this.startBuilding(filename);
-    }
+    await this.startBuilding(filename);
+    await this.destination(filename);
     return;
   }
 
@@ -215,5 +211,10 @@ export class EsBuildCompiler implements Compiler {
     }
 
     return false;
+  }
+
+  invalidate(filename: string): void {
+    // Invalidating is taken care of by esbuild
+    return;
   }
 }

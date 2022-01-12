@@ -24,11 +24,10 @@ export class Project {
   }
 
   enqueueReload(path: string, requiresInvalidation = false) {
-    void this.compiler.compile(path).then(() => {
-      this.currentBatch.paths.push(path);
-      this.currentBatch.invalidate = this.currentBatch.invalidate || requiresInvalidation;
-      this.debouncedReload();
-    });
+    this.compiler.invalidate(path);
+    this.currentBatch.paths.push(path);
+    this.currentBatch.invalidate = this.currentBatch.invalidate || requiresInvalidation;
+    this.debouncedReload();
   }
 
   debouncedReload = debounce(() => {
@@ -50,6 +49,7 @@ export class Project {
     if (invalidate) {
       await this.compiler.invalidateBuildSet();
     }
+    await this.compiler.rebuild();
     this.supervisor.restart();
   }
 
