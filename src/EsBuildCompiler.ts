@@ -3,6 +3,7 @@ import * as esbuild from "esbuild";
 import findRoot from "find-root";
 import globby from "globby";
 import path from "path";
+import { Compiler } from "./Compiler";
 import { ProjectConfig } from "./Options";
 import { log, projectConfig, time } from "./utils";
 
@@ -10,7 +11,7 @@ import { log, projectConfig, time } from "./utils";
 const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
 
 /** Implements TypeScript building using esbuild */
-export class Compiler {
+export class EsBuildCompiler implements Compiler {
   // a list of incremental esbuilds we're maintaining right now, one for each tsconfig.json / typescript project required by the process
   builds: BuildIncremental[] = [];
 
@@ -47,9 +48,10 @@ export class Compiler {
   /**
    * Start compiling a new file at `filename`. Returns the destination that file's compiled output will be found at in the workdir
    **/
-  async compile(filename: string) {
+  async compile(filename: string): Promise<void> {
     await this.startBuilding(filename);
-    return await this.destination(filename);
+    await this.rebuild();
+    return
   }
 
   /**

@@ -6,7 +6,7 @@ set -e
 trap "kill -9 0" INT TERM
 trap 'kill $(jobs -p)' EXIT
 
-$DIR/../../pkg/esbuild-dev.bin.js $DIR/run.ts &
+$DIR/../../pkg/esbuild-dev.bin.js $@ $DIR/run.ts &
 
 max_retry=5
 counter=0

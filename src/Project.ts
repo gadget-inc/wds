@@ -1,8 +1,8 @@
 import { FSWatcher } from "chokidar";
 import { compact, debounce } from "lodash";
+import { Compiler } from "./Compiler";
 import { ProjectConfig } from "./Options";
 import { Supervisor } from "./Supervisor";
-import { SwcCompiler } from "./SwcCompiler";
 import { log } from "./utils";
 
 interface ReloadBatch {
@@ -14,25 +14,21 @@ interface ReloadBatch {
 export class Project {
   cleanups: (() => void)[] = [];
   currentBatch: ReloadBatch = { paths: [], invalidate: false };
-  compiler!: SwcCompiler;
   supervisor!: Supervisor;
   watcher?: FSWatcher;
 
-  constructor(readonly workspaceRoot: string, readonly config: ProjectConfig) {}
+  constructor(readonly workspaceRoot: string, readonly config: ProjectConfig, readonly compiler: Compiler) {}
 
   addShutdownCleanup(cleanup: () => void) {
     this.cleanups.push(cleanup);
   }
 
   enqueueReload(path: string, requiresInvalidation = false) {
-    // TODO: Since we're not awaiting on the `compiler.compile`,
-    //  this creates a race condition where the `node` process could be reloaded
-    //  before the file has compiled. In practice, the file compiles orders of magnitude faster.
-    //  Nonetheless this should be addressed before releasing.
-    void this.compiler.compile(path);
-    this.currentBatch.paths.push(path);
-    this.currentBatch.invalidate = this.currentBatch.invalidate || requiresInvalidation;
-    this.debouncedReload();
+    void this.compiler.compile(path).then(() => {
+      this.currentBatch.paths.push(path);
+      this.currentBatch.invalidate = this.currentBatch.invalidate || requiresInvalidation;
+      this.debouncedReload();
+    });
   }
 
   debouncedReload = debounce(() => {
