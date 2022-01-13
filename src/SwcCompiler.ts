@@ -104,7 +104,7 @@ export class SwcCompiler implements Compiler {
   }
 
   private async buildFile(filename: string, root: string): Promise<CompiledFile> {
-    const file = await transformFile(filename, {
+    const output = await transformFile(filename, {
       cwd: root,
       filename: filename,
       root: this.workspaceRoot,
@@ -128,14 +128,12 @@ export class SwcCompiler implements Compiler {
         type: "commonjs",
         lazy: true,
       },
-    }).then(
-      async (output): Promise<CompiledFile> => {
-        const destination = path.join(this.outDir, filename);
-        await fs.mkdir(path.dirname(destination), { recursive: true });
-        await fs.writeFile(destination, output.code);
-        return { filename, root, destination };
-      }
-    );
+    });
+
+    const destination = path.join(this.outDir, filename);
+    await fs.mkdir(path.dirname(destination), { recursive: true });
+    await fs.writeFile(destination, output.code);
+    const file = { filename, root, destination };
 
     this.compiledFiles.addFile(file);
 
