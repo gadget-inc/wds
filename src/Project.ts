@@ -14,17 +14,17 @@ interface ReloadBatch {
 export class Project {
   cleanups: (() => void)[] = [];
   currentBatch: ReloadBatch = { paths: [], invalidate: false };
-  compiler!: Compiler;
   supervisor!: Supervisor;
   watcher?: FSWatcher;
 
-  constructor(readonly workspaceRoot: string, readonly config: ProjectConfig) {}
+  constructor(readonly workspaceRoot: string, readonly config: ProjectConfig, readonly compiler: Compiler) {}
 
   addShutdownCleanup(cleanup: () => void) {
     this.cleanups.push(cleanup);
   }
 
   enqueueReload(path: string, requiresInvalidation = false) {
+    this.compiler.invalidate(path);
     this.currentBatch.paths.push(path);
     this.currentBatch.invalidate = this.currentBatch.invalidate || requiresInvalidation;
     this.debouncedReload();
@@ -55,7 +55,6 @@ export class Project {
 
   async invalidateBuildSetAndReload() {
     await this.compiler.invalidateBuildSet();
-    await this.compiler.rebuild();
     this.supervisor.restart();
   }
 

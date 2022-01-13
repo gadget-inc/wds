@@ -7,11 +7,12 @@ import path from "path";
 import readline from "readline";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { Compiler } from "./Compiler";
+import { EsBuildCompiler } from "./EsBuildCompiler";
 import { MiniServer } from "./mini-server";
 import { RunOptions } from "./Options";
 import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
+import { SwcCompiler } from "./SwcCompiler";
 import { log, projectConfig } from "./utils";
 
 export const cli = async () => {
@@ -37,6 +38,11 @@ export const cli = async () => {
       type: "boolean",
       description: "Supervise and restart the process when it exits indefinitely",
       default: false,
+    })
+    .option("swc", {
+      type: "boolean",
+      description: "Use SWC instead of esbuild",
+      default: false,
     }).argv;
 
   return await esbuildDev({
@@ -44,6 +50,7 @@ export const cli = async () => {
     terminalCommands: args.commands,
     reloadOnChanges: args.watch,
     supervise: args.supervise,
+    useSwc: args.swc,
   });
 };
 
@@ -140,8 +147,8 @@ export const esbuildDev = async (options: RunOptions) => {
     serverSocketPath = path.join(workDir, "ipc.sock");
   }
 
-  const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())));
-  project.compiler = new Compiler(workspaceRoot, workDir);
+  const compiler = options.useSwc ? new SwcCompiler(workspaceRoot, workDir) : new EsBuildCompiler(workspaceRoot, workDir);
+  const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())), compiler);
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
 
   if (options.reloadOnChanges) startFilesystemWatcher(project);

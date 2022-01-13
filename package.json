@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@cspotcode/source-map-support": "^0.7.0",
+    "@swc/core": "^1.2.120",
     "chokidar": "^3.4.3",
     "esbuild": "^0.13.14",
     "find-root": "^1.1.0",
