@@ -30,7 +30,8 @@
     "lint:prettier": "node --max-old-space-size=4096 node_modules/.bin/prettier --check \"src/**/*.{js,ts,tsx}\"",
     "lint:eslint": "node --max-old-space-size=4096 node_modules/.bin/eslint --quiet --ext ts,tsx src",
     "lint:fix": "node --max-old-space-size=4096 node_modules/.bin/prettier --write --check \"src/**/*.{js,ts,tsx}\" && eslint --ext ts,tsx --fix src",
-    "prerelease": "gitpkg publish"
+    "prerelease": "gitpkg publish",
+    "test": "jest"
   },
   "dependencies": {
     "@cspotcode/source-map-support": "^0.7.0",
@@ -48,12 +49,16 @@
     "@gadgetinc/eslint-config": "^0.2.2",
     "@gadgetinc/prettier-config": "^0.1.0",
     "@types/find-root": "^1.1.2",
+    "@types/jest": "^27.4.0",
     "@types/lodash": "^4.14.167",
     "@types/node": "^14.14.14",
     "@types/yargs": "^15.0.12",
     "eslint": "^7.15.0",
+    "eslint-plugin-jest": "^25.3.4",
     "gitpkg": "^1.0.0-beta.2",
+    "jest": "^27.4.7",
     "prettier": "^2.2.1",
+    "ts-jest": "^27.1.2",
     "typescript": "^4.1.3"
   }
 }

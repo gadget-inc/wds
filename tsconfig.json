@@ -12,10 +12,16 @@
     "moduleResolution": "node",
     "module": "commonjs",
     "target": "es2020",
-    "types": ["node"],
+    "types": ["node", "jest"],
     "declaration": true,
     "outDir": "./pkg",
     "rootDir": "./src"
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "node_modules/@types/jest/index.d.ts"
+  ],
+  "exclude": [
+    "spec/fixtures",
+  ]
 }

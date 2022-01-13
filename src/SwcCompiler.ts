@@ -1,4 +1,4 @@
-import { transformFile } from "@swc/core";
+import { Config, transformFile } from "@swc/core";
 import findRoot from "find-root";
 import * as fs from "fs/promises";
 import globby from "globby";
@@ -10,7 +10,9 @@ import { log, projectConfig } from "./utils";
 // https://esbuild.github.io/api/#resolve-extensions
 const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
 
-export type CompiledFile = { filename: string; root: string; destination: string };
+export class MissingDestinationError extends Error {}
+
+export type CompiledFile = { filename: string; root: string; destination: string; config: Config };
 export type Group = { root: string; files: Array<CompiledFile> };
 
 type FileGroup = Map<string, CompiledFile>;
@@ -45,6 +47,15 @@ class CompiledFiles {
       }
     }
   }
+
+  existingFile(filename: string): CompiledFile | undefined {
+    for (const [_root, files] of this.groups.entries()) {
+      const file = files.get(filename);
+      if (file) {
+        return file;
+      }
+    }
+  }
 }
 
 /** Implements TypeScript building using swc */
@@ -61,10 +72,10 @@ export class SwcCompiler implements Compiler {
   }
 
   async compile(filename: string): Promise<void> {
-    const existingGroup = this.compiledFiles.group(filename);
+    const existingFile = this.compiledFiles.existingFile(filename);
 
-    if (existingGroup) {
-      await this.buildFile(filename, existingGroup.root);
+    if (existingFile) {
+      await this.buildFile(filename, existingFile.root, existingFile.config);
     } else {
       await this.buildGroup(filename);
     }
@@ -77,7 +88,7 @@ export class SwcCompiler implements Compiler {
     const group = this.compiledFiles.group(filename);
 
     if (!group) {
-      throw new Error(await this.missingDestination(filename));
+      throw new MissingDestinationError(await this.missingDestination(filename));
     }
 
     for (const file of group.files) {
@@ -103,13 +114,14 @@ export class SwcCompiler implements Compiler {
     return { root, fileNames, config };
   }
 
-  private async buildFile(filename: string, root: string): Promise<CompiledFile> {
+  private async buildFile(filename: string, root: string, config: Config): Promise<CompiledFile> {
     const output = await transformFile(filename, {
       cwd: root,
       filename: filename,
       root: this.workspaceRoot,
       rootMode: "root",
       sourceMaps: "inline",
+      swcrc: false,
       inlineSourcesContent: true,
       env: {
         targets: {
@@ -128,12 +140,13 @@ export class SwcCompiler implements Compiler {
         type: "commonjs",
         lazy: true,
       },
+      ...config,
     });
 
     const destination = path.join(this.outDir, filename);
     await fs.mkdir(path.dirname(destination), { recursive: true });
     await fs.writeFile(destination, output.code);
-    const file = { filename, root, destination };
+    const file = { filename, root, destination, config };
 
     this.compiledFiles.addFile(file);
 
@@ -149,7 +162,7 @@ export class SwcCompiler implements Compiler {
     const { root, fileNames, config } = await this.getModule(filename);
 
     await this.reportErrors(async () => {
-      await Promise.all(fileNames.map((filename) => this.buildFile(filename, root)));
+      await Promise.all(fileNames.map((filename) => this.buildFile(filename, root, config.swc ?? {})));
     });
 
     log.debug("started build", {
@@ -174,7 +187,7 @@ export class SwcCompiler implements Compiler {
     if (ignorePattern) {
       return `File ${filename} is imported but not being built because it is explicitly ignored in the esbuild-dev project config. It is being ignored by the provided glob pattern '${ignorePattern}', remove this pattern from the project config or don't import this file to fix.`;
     } else {
-      return `Built output for file ${filename} not found. Is it outside the project directory?`;
+      return `Built output for file ${filename} not found. Is it outside the project directory, or has it failed to build?`;
     }
   }
 
