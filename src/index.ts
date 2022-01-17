@@ -4,6 +4,7 @@ import findWorkspaceRoot from "find-yarn-workspace-root";
 import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
+import process from "process";
 import readline from "readline";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
@@ -13,7 +14,14 @@ import { RunOptions } from "./Options";
 import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
 import { SwcCompiler } from "./SwcCompiler";
+import * as telemetry from "./Telemetry";
 import { log, projectConfig } from "./utils";
+import {BasicTracerProvider, ConsoleSpanExporter, SimpleSpanProcessor} from "@opentelemetry/sdk-trace-base";
+import {SpanStatusCode, trace} from "@opentelemetry/api";
+import {JaegerExporter} from "@opentelemetry/exporter-jaeger";
+import {Resource} from "@opentelemetry/resources";
+import {SemanticResourceAttributes} from "@opentelemetry/semantic-conventions";
+import {tracer} from "./Telemetry";
 
 export const cli = async () => {
   const args = yargs(hideBin(process.argv))
@@ -147,9 +155,17 @@ export const esbuildDev = async (options: RunOptions) => {
     serverSocketPath = path.join(workDir, "ipc.sock");
   }
 
+  const config = await projectConfig(findRoot(process.cwd()));
   const compiler = options.useSwc ? new SwcCompiler(workspaceRoot, workDir) : new EsBuildCompiler(workspaceRoot, workDir);
-  const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())), compiler);
+
+  telemetry.setup({ jaegerUrl: 'http://localhost:14268/api/traces', console: true });
+
+  const project = new Project(workspaceRoot, config, compiler);
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
+
+  log.info("start span");
+  const span = tracer.startSpan("main");
+  span.setStatus({code: SpanStatusCode.OK});
 
   if (options.reloadOnChanges) startFilesystemWatcher(project);
   if (options.terminalCommands) startTerminalCommandListener(project);
@@ -161,17 +177,21 @@ export const esbuildDev = async (options: RunOptions) => {
 
   process.on("SIGINT", () => {
     log.debug(`process ${process.pid} got SIGINT`);
-    project.shutdown(0);
+    span.end();
+
+    void telemetry.shutdown().finally(() => project.shutdown(0))
   });
   process.on("SIGTERM", () => {
     log.debug(`process ${process.pid} got SIGTERM`);
-    project.shutdown(0);
+    span.end();
+    void telemetry.shutdown().finally(() => project.shutdown(0))
   });
 
   project.supervisor.process.on("exit", (code) => {
     log.debug(`child process exited with code ${code}, ${options.supervise ? "not exiting because supervise mode" : "exiting..."}`);
+    span.end();
     if (!options.supervise) {
-      project.shutdown(code ?? 1);
+      void telemetry.shutdown().finally(() => project.shutdown(code ?? 1))
     }
   });
 };
