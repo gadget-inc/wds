@@ -1,6 +1,5 @@
-import * as opentelemetry from "@opentelemetry/api";
 import * as telemetry from "./Telemetry";
-import {rootTrace, trace, wrap} from "./Telemetry";
+import {rootTrace, sdk, trace, wrap} from "./Telemetry";
 import { watch } from "chokidar";
 import findRoot from "find-root";
 import findWorkspaceRoot from "find-yarn-workspace-root";
@@ -18,7 +17,6 @@ import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
 import { SwcCompiler } from "./SwcCompiler";
 import { log, projectConfig } from "./utils";
-import {Span, SpanStatusCode} from "@opentelemetry/api";
 
 export const cli = async () => {
   const args = yargs(hideBin(process.argv))
@@ -49,6 +47,8 @@ export const cli = async () => {
       description: "Use SWC instead of esbuild",
       default: false,
     }).argv;
+
+  await telemetry.setup();
 
   return await esbuildDev({
     argv: args._ as any,
@@ -141,19 +141,6 @@ const childProcessArgs = () => {
   return ["-r", path.join(__dirname, "child-process-registration.js"), "-r", require.resolve("@cspotcode/source-map-support/register")];
 };
 
-const child = (parent: Span) => {
-  const tracer = opentelemetry.trace.getTracer('esbuild-dev');
-  const ctx = opentelemetry.trace.setSpan(opentelemetry.context.active(), parent);
-  const span = tracer.startSpan('doWork', undefined, ctx);
-  span.end();
-}
-
-// const parent = async () => {
-//   await trace("parent", async() => {
-//     return await child()
-//   })
-// }
-
 export const esbuildDev = async (options: RunOptions) => {
   const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "esbuild-dev"));
@@ -169,39 +156,20 @@ export const esbuildDev = async (options: RunOptions) => {
   const config = await projectConfig(findRoot(process.cwd()));
   const compiler = options.useSwc ? new SwcCompiler(workspaceRoot, workDir) : new EsBuildCompiler(workspaceRoot, workDir);
 
-  telemetry.setup({ jaegerUrl: 'http://localhost:14268/api/traces', console: true });
-  const tracer = opentelemetry.trace.getTracer('esbuild-dev');
 
   const project = new Project(workspaceRoot, config, compiler);
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
 
 
-  const parentSpan = tracer.startSpan('main');
-  child(parentSpan);
-  parentSpan.end();
-
-  rootTrace("root", () => {
-    trace("main-auto", () => {
-      trace("main-child", () => {
+  await rootTrace("root", async () => {
+    await trace("main-auto", async () => {
+      await trace("main-child", async () => {
         for (let i = 0; i <= Math.floor(Math.random() * 40000000); i += 1) {
           // empty
         }
       })
     })
   })
-  //
-  // await trace("sync-main", async () => {
-  //   await trace("sync-child", async () => {
-  //     console.log("yes");
-  //   })
-  // })
-
-    // span.setStatus({code: SpanStatusCode.OK});
-    //
-    // tracer.startActiveSpan("child", (span: Span) => {
-    //   span.end();
-    // });
-
     if (options.reloadOnChanges) startFilesystemWatcher(project);
     if (options.terminalCommands) startTerminalCommandListener(project);
     await startIPCServer(serverSocketPath, project);

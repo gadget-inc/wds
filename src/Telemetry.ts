@@ -2,117 +2,54 @@ import * as opentelemetry from "@opentelemetry/api";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { Resource } from "@opentelemetry/resources";
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import { BasicTracerProvider, ConsoleSpanExporter, ReadableSpan, SimpleSpanProcessor, SpanExporter } from "@opentelemetry/sdk-trace-base";
+import { ConsoleSpanExporter, InMemorySpanExporter, SimpleSpanProcessor, SpanExporter } from "@opentelemetry/sdk-trace-base";
 import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
-import {log} from "./utils";
-import { ExportResult, ExportResultCode } from '@opentelemetry/core';
-import {Context, SpanOptions, SpanStatusCode, Tracer} from "@opentelemetry/api";
+import {Context, ROOT_CONTEXT, SpanOptions, SpanStatusCode, Tracer} from "@opentelemetry/api";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import {JaegerExporter} from "@opentelemetry/exporter-jaeger";
-import {NodeTracerProvider} from "@opentelemetry/node";
 
 export type TelemetryOptions = {
   jaegerUrl?: string;
   console?: boolean;
-
-  // TODO: Prometheus
 };
 
-const isSetup = false;
-let sdk: NodeSDK;
-
-class CombinedExporter implements SpanExporter {
-  private readonly exporters: Array<SpanExporter>
-  constructor() {
-    this.exporters = []
-  }
-
-  addExporter(exporter: SpanExporter): void {
-    this.exporters.push(exporter);
-  }
-
-  export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
-    const promises: Array<Promise<ExportResult>> = [];
-    for (const exporter of this.exporters) {
-      promises.push(new Promise((resolve) => {
-        exporter.export(spans, (result) => {
-          resolve(result);
-        })
-      }));
-    }
-
-    void Promise.all(promises).then((results) => {
-      for (const result of results) {
-        if (result.code == ExportResultCode.FAILED) {
-          return resultCallback(result);
-        }
-      }
-
-      return resultCallback({ code: ExportResultCode.SUCCESS });
-    })
-  }
-
-  shutdown(): Promise<void> {
-    const promises = []
-    for (const exporter of this.exporters) {
-      promises.push(exporter.shutdown());
-    }
-    return Promise.all(promises).then(() => {
-      return;
-    }).catch(error => {
-      log.error(`Failed shutdown OpenTelemetry exporter: ${error}.`)
-    });
-  }
-}
-// const traceExporter = new CombinedExporter();
 const resource = new Resource({
   [SemanticResourceAttributes.SERVICE_NAME]: "esbuild-dev",
 });
 
-let exporter: any;
+let exporter: SpanExporter;
 
-export const setup = (options: TelemetryOptions) => {
+if (process.env.ESBUILD_DEV_JAEGER_URL) {
+  exporter = new JaegerExporter({
+    endpoint: process.env.ESBUILD_DEV_JAEGER_URL,
+  });
+} else if (process.env.ESBUILD_DEV_OTLP_URL) {
+  exporter = new OTLPTraceExporter({
+    url: process.env.ESBUILD_DEV_OTLP_URL,
+  })
+} else if (process.env.ESBUILD_DEV_TRACE_CONSOLE) {
+  exporter = new ConsoleSpanExporter();
+} else {
+  exporter = new InMemorySpanExporter();
+}
 
-  if (options.jaegerUrl) {
-    // TODO: Provide nicer error message
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { JaegerExporter } = require("@opentelemetry/exporter-jaeger");
-
-    exporter = new JaegerExporter({
-      endpoint: 'http://localhost:14268/api/traces',
-    });
-
-    const spanProcessor = new SimpleSpanProcessor(exporter);
-
-    sdk = new NodeSDK({
-      resource,
-      traceExporter: exporter,
-      spanProcessor,
-      instrumentations: [getNodeAutoInstrumentations()],
-    });
-
-    // provider.addSpanProcessor();
-  }
-
-  // if (options.console) {
-  //   log.debug("Using OpenTeddlemetry Console exporter");
-  //   provider.addSpanProcessor(new SimpleSpanProcessor(new ConsoleSpanExporter()));
-  // }
-
-  // provider.register();
-  tracer = opentelemetry.trace.getTracer("esbuild-dev");
-};
+const spanProcessor = new SimpleSpanProcessor(exporter);
+export const sdk = new NodeSDK({
+  resource,
+  traceExporter: exporter,
+  spanProcessor,
+  instrumentations: [getNodeAutoInstrumentations()],
+});
 
 export async function shutdown() {
-  console.log("SHUTDOWN", sdk);
-  await sdk?.shutdown()
-  console.log("SHUTDOWN", sdk);
-  await exporter.shutdown();
-  // await provider.shutdown();
+  await sdk.shutdown()
 };
 
-class TracerNotConfigured extends Error {}
+export async function setup() {
+  await sdk.start();
+}
 
-let tracer: Tracer;
+const tracer = opentelemetry.trace.getTracer("esbuild-dev");
 
 const errorMessage = (error: unknown) => {
   if (typeof error == "string") {
@@ -125,16 +62,16 @@ const errorMessage = (error: unknown) => {
 };
 
 /** Run a function within a traced span. Uses the currently active context to find a parent span.  */
-export function traceStartingFromContext<T>(
+export async function traceStartingFromContext<T>(
   name: string,
   context: Context,
   options: SpanOptions | undefined,
-  fn: () => T
-): T {
+  fn: () => Promise<T>
+): Promise<T> {
   const span = tracer.startSpan(name, options, context);
-  return opentelemetry.context.with(opentelemetry.trace.setSpan(context, span), () => {
+  return await opentelemetry.context.with(opentelemetry.trace.setSpan(context, span), async () => {
     try {
-      const result = fn();
+      const result = await fn();
       span.end();
       return result;
     } catch (err) {
@@ -146,14 +83,14 @@ export function traceStartingFromContext<T>(
 }
 
 /** Run a function within a traced span. Uses the currently active context to find a parent span.  */
-export function trace<T>(name: string, fn: () => T): T;
-export function trace<T>(name: string, options: SpanOptions, fn: () => T): T;
-export function trace<T>(
+export async function trace<T>(name: string, fn: () => Promise<T>): Promise<T>;
+export async function trace<T>(name: string, options: SpanOptions, fn: () => Promise<T>): Promise<T>;
+export async function trace<T>(
   name: string,
-  fnOrOptions: SpanOptions | (() => T),
-  fn?: undefined | (() => T)
-): T {
-  let run: () => T;
+  fnOrOptions: SpanOptions | (() => Promise<T>),
+  fn?: undefined | (() => Promise<T>)
+): Promise<T> {
+  let run: () => Promise<T>;
   let options: SpanOptions | undefined;
   if (fn) {
     run = fn;
@@ -163,20 +100,18 @@ export function trace<T>(
     options = undefined;
   }
 
-  log.info("EXISTING CONTEXT", opentelemetry.context.active());
-
-  return traceStartingFromContext(name, opentelemetry.context.active(), options, run);
+  return await traceStartingFromContext(name, opentelemetry.context.active(), options, run);
 }
 
 /** Run a function within a new root span. Ignores any currently active spans in the current context. */
-export function rootTrace<T>(name: string, fn: () => T): T;
-export function rootTrace<T>(name: string, options: SpanOptions, fn: () => T): T;
-export function rootTrace<T>(
+export async function rootTrace<T>(name: string, fn: () => Promise<T>): Promise<T>;
+export async function rootTrace<T>(name: string, options: SpanOptions, fn: () => Promise<T>): Promise<T>;
+export async function rootTrace<T>(
   name: string,
-  fnOrOptions: SpanOptions | (() => T),
-  fn?: undefined | (() => T)
-): T {
-  let run: () => T;
+  fnOrOptions: SpanOptions | (() => Promise<T>),
+  fn?: undefined | (() => Promise<T>)
+): Promise<T> {
+  let run: () => Promise<T>;
   let options: SpanOptions | undefined;
   if (fn) {
     run = fn;
@@ -186,17 +121,17 @@ export function rootTrace<T>(
     options = undefined;
   }
 
-  return traceStartingFromContext(name, opentelemetry.ROOT_CONTEXT, options, run);
+  return await traceStartingFromContext(name, ROOT_CONTEXT, options, run);
 }
 
 /** Wrap a function in tracing, and return it  */
 export const wrap = <T extends (...args: any[]) => any>(name: string, func: T, options?: SpanOptions): T => {
-  return function (this: any, ...args: Parameters<T>) {
+  return async function (this: any, ...args: Parameters<T>) {
     const span = tracer.startSpan(name, options, opentelemetry.context.active());
-    return opentelemetry.context.with(opentelemetry.trace.setSpan(opentelemetry.context.active(), span), () => {
+    return await opentelemetry.context.with(opentelemetry.trace.setSpan(opentelemetry.context.active(), span), async () => {
       try {
         // eslint-disable-next-line @typescript-eslint/await-thenable
-        const result = func.call(this, ...args);
+        const result = await func.call(this, ...args);
         span.end();
         return result;
       } catch (err) {
