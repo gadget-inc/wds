@@ -1,3 +1,6 @@
+import * as opentelemetry from "@opentelemetry/api";
+import * as telemetry from "./Telemetry";
+import {rootTrace, trace, wrap} from "./Telemetry";
 import { watch } from "chokidar";
 import findRoot from "find-root";
 import findWorkspaceRoot from "find-yarn-workspace-root";
@@ -14,14 +17,8 @@ import { RunOptions } from "./Options";
 import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
 import { SwcCompiler } from "./SwcCompiler";
-import * as telemetry from "./Telemetry";
 import { log, projectConfig } from "./utils";
-import {BasicTracerProvider, ConsoleSpanExporter, SimpleSpanProcessor} from "@opentelemetry/sdk-trace-base";
-import {SpanStatusCode, trace} from "@opentelemetry/api";
-import {JaegerExporter} from "@opentelemetry/exporter-jaeger";
-import {Resource} from "@opentelemetry/resources";
-import {SemanticResourceAttributes} from "@opentelemetry/semantic-conventions";
-import {tracer} from "./Telemetry";
+import {Span, SpanStatusCode} from "@opentelemetry/api";
 
 export const cli = async () => {
   const args = yargs(hideBin(process.argv))
@@ -85,6 +82,7 @@ const startFilesystemWatcher = (project: Project) => {
   const watcher = watch([], { ignoreInitial: true });
 
   project.supervisor.on("message", (value) => {
+    log.info("GOT MESSAGE FROM SUPERVISOR", value);
     if (value.require) {
       if (!value.require.includes("node_modules")) {
         watcher.add(value.require);
@@ -143,6 +141,19 @@ const childProcessArgs = () => {
   return ["-r", path.join(__dirname, "child-process-registration.js"), "-r", require.resolve("@cspotcode/source-map-support/register")];
 };
 
+const child = (parent: Span) => {
+  const tracer = opentelemetry.trace.getTracer('esbuild-dev');
+  const ctx = opentelemetry.trace.setSpan(opentelemetry.context.active(), parent);
+  const span = tracer.startSpan('doWork', undefined, ctx);
+  span.end();
+}
+
+// const parent = async () => {
+//   await trace("parent", async() => {
+//     return await child()
+//   })
+// }
+
 export const esbuildDev = async (options: RunOptions) => {
   const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "esbuild-dev"));
@@ -159,39 +170,60 @@ export const esbuildDev = async (options: RunOptions) => {
   const compiler = options.useSwc ? new SwcCompiler(workspaceRoot, workDir) : new EsBuildCompiler(workspaceRoot, workDir);
 
   telemetry.setup({ jaegerUrl: 'http://localhost:14268/api/traces', console: true });
+  const tracer = opentelemetry.trace.getTracer('esbuild-dev');
 
   const project = new Project(workspaceRoot, config, compiler);
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
 
-  log.info("start span");
-  const span = tracer.startSpan("main");
-  span.setStatus({code: SpanStatusCode.OK});
 
-  if (options.reloadOnChanges) startFilesystemWatcher(project);
-  if (options.terminalCommands) startTerminalCommandListener(project);
-  await startIPCServer(serverSocketPath, project);
+  const parentSpan = tracer.startSpan('main');
+  child(parentSpan);
+  parentSpan.end();
 
-  // kickoff the first child process
-  options.supervise && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
-  await project.invalidateBuildSetAndReload();
+  rootTrace("root", () => {
+    trace("main-auto", () => {
+      trace("main-child", () => {
+        for (let i = 0; i <= Math.floor(Math.random() * 40000000); i += 1) {
+          // empty
+        }
+      })
+    })
+  })
+  //
+  // await trace("sync-main", async () => {
+  //   await trace("sync-child", async () => {
+  //     console.log("yes");
+  //   })
+  // })
 
-  process.on("SIGINT", () => {
-    log.debug(`process ${process.pid} got SIGINT`);
-    span.end();
+    // span.setStatus({code: SpanStatusCode.OK});
+    //
+    // tracer.startActiveSpan("child", (span: Span) => {
+    //   span.end();
+    // });
 
-    void telemetry.shutdown().finally(() => project.shutdown(0))
-  });
-  process.on("SIGTERM", () => {
-    log.debug(`process ${process.pid} got SIGTERM`);
-    span.end();
-    void telemetry.shutdown().finally(() => project.shutdown(0))
-  });
+    if (options.reloadOnChanges) startFilesystemWatcher(project);
+    if (options.terminalCommands) startTerminalCommandListener(project);
+    await startIPCServer(serverSocketPath, project);
 
-  project.supervisor.process.on("exit", (code) => {
-    log.debug(`child process exited with code ${code}, ${options.supervise ? "not exiting because supervise mode" : "exiting..."}`);
-    span.end();
-    if (!options.supervise) {
-      void telemetry.shutdown().finally(() => project.shutdown(code ?? 1))
-    }
-  });
+    // kickoff the first child process
+    options.supervise && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
+    await project.invalidateBuildSetAndReload();
+
+    process.on("SIGINT", () => {
+      log.debug(`process ${process.pid} got SIGINT`);
+
+      void telemetry.shutdown().finally(() => project.shutdown(0))
+    });
+    process.on("SIGTERM", () => {
+      log.debug(`process ${process.pid} got SIGTERM`);
+      void telemetry.shutdown().finally(() => project.shutdown(0))
+    });
+
+    project.supervisor.process.on("exit", (code) => {
+      log.debug(`child process exited with code ${code}, ${options.supervise ? "not exiting because supervise mode" : "exiting..."}`);
+      if (!options.supervise) {
+        void telemetry.shutdown().finally(() => project.shutdown(code ?? 1))
+      }
+  })
 };

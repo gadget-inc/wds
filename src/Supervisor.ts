@@ -3,6 +3,7 @@ import { EventEmitter } from "events";
 import { RunOptions } from "./Options";
 import { Project } from "./Project";
 import { log } from "./utils";
+import {Span} from "@opentelemetry/api";
 
 /** */
 export class Supervisor extends EventEmitter {
@@ -34,23 +35,26 @@ export class Supervisor extends EventEmitter {
       this.process.kill("SIGKILL");
     }
 
-    this.process = spawn("node", this.argv, {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        ESBUILD_DEV_SOCKET_PATH: this.socketPath,
-        ESBUILD_DEV_EXTENSIONS: this.project.config.extensions.join(","),
-      },
-      stdio: [null, "inherit", "inherit", "ipc"],
-    });
+    // return tracer.startActiveSpan("spawn-child", (span: Span) => {
+      this.process = spawn("node", this.argv, {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          ESBUILD_DEV_SOCKET_PATH: this.socketPath,
+          ESBUILD_DEV_EXTENSIONS: this.project.config.extensions.join(","),
+        },
+        stdio: [null, "inherit", "inherit", "ipc"],
+      });
 
-    this.process.on("message", (value) => this.emit("message", value));
-    this.process.on("exit", (code, signal) => {
-      if (signal !== "SIGKILL" && this.options.supervise) {
-        log.warn(`process exited with ${code}`);
-      }
-    });
+      this.process.on("message", (value) => this.emit("message", value));
+      this.process.on("exit", (code, signal) => {
+        // span.end();
+        if (signal !== "SIGKILL" && this.options.supervise) {
+          log.warn(`process exited with ${code}`);
+        }
+      });
 
-    return this.process;
+      return this.process;
+    // })
   }
 }
