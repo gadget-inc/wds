@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import http from "http";
 import { log } from "./utils";
+import {wrap} from "./Telemetry";
 
 // async function to ask the leader process to do the compilation and hand us back a list of newly compiled source filenames to compiled filenames
-const compileInLeaderProcess = async (filename: string): Promise<Record<string, string>> => {
+const compileInLeaderProcess = wrap("compileInLeaderProcess", async (filename: string): Promise<Record<string, string>> => {
   return await new Promise((resolve, reject) => {
     const request = http.request(
       { socketPath: process.env["ESBUILD_DEV_SOCKET_PATH"]!, path: "/compile", method: "POST", timeout: 200 },
@@ -24,6 +25,6 @@ const compileInLeaderProcess = async (filename: string): Promise<Record<string, 
     request.write(filename);
     request.end();
   });
-};
+});
 
 module.exports = compileInLeaderProcess;

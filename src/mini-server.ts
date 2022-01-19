@@ -1,4 +1,5 @@
 import http from "http";
+import opentelemetry, {propagation, ROOT_CONTEXT} from "@opentelemetry/api";
 import { promisify } from "util";
 import { log } from "./utils";
 

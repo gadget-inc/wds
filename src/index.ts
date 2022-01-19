@@ -1,5 +1,5 @@
 import * as telemetry from "./Telemetry";
-import {rootTrace, sdk, trace, wrap} from "./Telemetry";
+import {rootTrace, trace, traceStartingFromContext, wrap} from "./Telemetry";
 import { watch } from "chokidar";
 import findRoot from "find-root";
 import findWorkspaceRoot from "find-yarn-workspace-root";
@@ -17,6 +17,7 @@ import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
 import { SwcCompiler } from "./SwcCompiler";
 import { log, projectConfig } from "./utils";
+import {propagation, ROOT_CONTEXT} from "@opentelemetry/api";
 
 export const cli = async () => {
   const args = yargs(hideBin(process.argv))
@@ -50,13 +51,13 @@ export const cli = async () => {
 
   await telemetry.setup();
 
-  return await esbuildDev({
+  return await rootTrace("esbuild-dev", () => esbuildDev({
     argv: args._ as any,
     terminalCommands: args.commands,
     reloadOnChanges: args.watch,
     supervise: args.supervise,
     useSwc: args.swc,
-  });
+  }));
 };
 
 const startTerminalCommandListener = (project: Project) => {
@@ -117,11 +118,12 @@ const startIPCServer = async (socketPath: string, project: Project) => {
   };
 
   const server = new MiniServer({
-    "/compile": async (request, reply) => {
-      const results = await compile(request.body);
+    "/compile":  async (request, reply) => {
+      const results = await trace("/compile", async () => await compile(request.body));
       reply.json({ filenames: results });
     },
     "/file-required": (request, reply) => {
+      console.log("file-required", request.raw.headers)
       for (const filename of request.json()) {
         project.watcher?.add(filename);
       }
@@ -156,42 +158,32 @@ export const esbuildDev = async (options: RunOptions) => {
   const config = await projectConfig(findRoot(process.cwd()));
   const compiler = options.useSwc ? new SwcCompiler(workspaceRoot, workDir) : new EsBuildCompiler(workspaceRoot, workDir);
 
-
   const project = new Project(workspaceRoot, config, compiler);
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
 
+  // console.log(result);
+  if (options.reloadOnChanges) startFilesystemWatcher(project);
+  if (options.terminalCommands) startTerminalCommandListener(project);
+  await startIPCServer(serverSocketPath, project);
 
-  await rootTrace("root", async () => {
-    await trace("main-auto", async () => {
-      await trace("main-child", async () => {
-        for (let i = 0; i <= Math.floor(Math.random() * 40000000); i += 1) {
-          // empty
-        }
-      })
-    })
-  })
-    if (options.reloadOnChanges) startFilesystemWatcher(project);
-    if (options.terminalCommands) startTerminalCommandListener(project);
-    await startIPCServer(serverSocketPath, project);
+  // kickoff the first child process
+  options.supervise && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
+  await project.invalidateBuildSetAndReload();
 
-    // kickoff the first child process
-    options.supervise && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
-    await project.invalidateBuildSetAndReload();
+  process.on("SIGINT", () => {
+    log.debug(`process ${process.pid} got SIGINT`);
 
-    process.on("SIGINT", () => {
-      log.debug(`process ${process.pid} got SIGINT`);
+    void telemetry.shutdown().finally(() => project.shutdown(0));
+  });
+  process.on("SIGTERM", () => {
+    log.debug(`process ${process.pid} got SIGTERM`);
+    void telemetry.shutdown().finally(() => project.shutdown(0));
+  });
 
-      void telemetry.shutdown().finally(() => project.shutdown(0))
-    });
-    process.on("SIGTERM", () => {
-      log.debug(`process ${process.pid} got SIGTERM`);
-      void telemetry.shutdown().finally(() => project.shutdown(0))
-    });
-
-    project.supervisor.process.on("exit", (code) => {
-      log.debug(`child process exited with code ${code}, ${options.supervise ? "not exiting because supervise mode" : "exiting..."}`);
-      if (!options.supervise) {
-        void telemetry.shutdown().finally(() => project.shutdown(code ?? 1))
-      }
-  })
+  project.supervisor.process.on("exit", (code) => {
+    log.debug(`child process exited with code ${code}, ${options.supervise ? "not exiting because supervise mode" : "exiting..."}`);
+    if (!options.supervise) {
+      void telemetry.shutdown().finally(() => project.shutdown(code ?? 1));
+    }
+  });
 };

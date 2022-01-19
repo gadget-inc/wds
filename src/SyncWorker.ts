@@ -1,7 +1,11 @@
+import * as opentelemetry from "@opentelemetry/api";
 // have to use a module import like this so we can re-access imported properties as they might change, see https://github.com/nodejs/node/issues/36531
+import {rootTrace, setup, shutdown, trace, traced, traceStartingFromContext} from "./Telemetry";
 import { promises as fs } from "fs";
 import workerThreads, { MessageChannel, MessagePort, receiveMessageOnPort, Worker } from "worker_threads";
 import { log } from "./utils";
+import {propagation, ROOT_CONTEXT} from "@opentelemetry/api";
+import process from "process";
 
 log.debug("syncworker file boot", { isMainThread: workerThreads.isMainThread, hasWorkerData: !!workerThreads.workerData });
 
@@ -43,6 +47,8 @@ export class SyncWorker {
       port: port2,
       isESBuildDevWorker: true,
     };
+
+    // propagation.inject(opentelemetry.context.active(), workerData);
 
     this.worker = new Worker(__filename, {
       argv: [],
@@ -125,7 +131,9 @@ if (!workerThreads.isMainThread) {
       const sharedBufferView = new Int32Array(call.sharedBuffer);
 
       try {
-        const result = await implementation(...call.args);
+        const result = await trace("child.worker-thread.compiling", async () => {
+          return await implementation(...call.args)
+        });
         port.postMessage({ id: call.id, result });
       } catch (error) {
         void file?.write(`error running syncworker: ${JSON.stringify(error)}\n`);
@@ -151,5 +159,16 @@ if (!workerThreads.isMainThread) {
     void file?.write(`sync worker booted\n`);
   };
 
-  void runWorker();
+  void setup(true).then(() => {
+    const ctx = propagation.extract(ROOT_CONTEXT, process.env);
+    console.log(ctx);
+
+    process.on("exit", () => {
+      void shutdown();
+    })
+
+    traceStartingFromContext("runWorker", ctx, undefined, () => {
+      return runWorker();
+    })
+  })
 }

@@ -6,6 +6,8 @@ import path from "path";
 import { Compiler } from "./Compiler";
 import { ProjectConfig } from "./Options";
 import { log, projectConfig } from "./utils";
+import {trace, traced} from "./Telemetry";
+import opentelemetry, {context} from "@opentelemetry/api";
 
 // https://esbuild.github.io/api/#resolve-extensions
 const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
@@ -71,6 +73,7 @@ export class SwcCompiler implements Compiler {
     this.compiledFiles = new CompiledFiles();
   }
 
+  @traced("SwcCompiler.compile")
   async compile(filename: string): Promise<void> {
     const existingFile = this.compiledFiles.existingFile(filename);
 
@@ -83,6 +86,7 @@ export class SwcCompiler implements Compiler {
     return;
   }
 
+  @traced("SwcCompiler.getModule", undefined, { filename: 0 })
   async fileGroup(filename: string) {
     const contents: Record<string, string> = {};
     const group = this.compiledFiles.group(filename);
@@ -98,6 +102,7 @@ export class SwcCompiler implements Compiler {
     return contents;
   }
 
+  @traced("SwcCompiler.getModule")
   private async getModule(filename: string) {
     const root = findRoot(filename);
     const config = await projectConfig(root);
@@ -114,6 +119,7 @@ export class SwcCompiler implements Compiler {
     return { root, fileNames, config };
   }
 
+  @traced("SwcCompiler.buildFile", undefined, { filename: 0 })
   private async buildFile(filename: string, root: string, config: Config): Promise<CompiledFile> {
     const output = await transformFile(filename, {
       cwd: root,
@@ -141,7 +147,7 @@ export class SwcCompiler implements Compiler {
         lazy: true,
       },
       ...config,
-    });
+    })
 
     const destination = path.join(this.outDir, filename);
     await fs.mkdir(path.dirname(destination), { recursive: true });
@@ -157,8 +163,8 @@ export class SwcCompiler implements Compiler {
    * Build the group of files at the specified path.
    * If the group has already been built, build only the specified file.
    */
+  @traced("SwcCompiler.buildGroup", undefined, { "filename": 0 })
   private async buildGroup(filename: string): Promise<void> {
-    // TODO: Use the config
     const { root, fileNames, config } = await this.getModule(filename);
 
     await this.reportErrors(async () => {

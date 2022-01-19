@@ -14,6 +14,7 @@
     "target": "es2020",
     "types": ["node", "jest"],
     "declaration": true,
+    "experimentalDecorators": true,
     "outDir": "./pkg",
     "rootDir": "./src"
   },
