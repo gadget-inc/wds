@@ -1,10 +1,10 @@
 import * as opentelemetry from "@opentelemetry/api";
-import {setup, shutdown, trace, tracer, traceStartingFromContext, wrap} from "./Telemetry";
+import { propagation, ROOT_CONTEXT } from "@opentelemetry/api";
 import { throttle } from "lodash";
 import process from "process";
 import { SyncWorkerData } from "./SyncWorker";
+import { setup, shutdown, trace, tracer, wrap } from "./Telemetry";
 import { log } from "./utils";
-import {propagation, ROOT_CONTEXT} from "@opentelemetry/api";
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 const http = require("http");
@@ -23,14 +23,16 @@ void setup().then(() => {
   opentelemetry.trace.setSpan(ctx, span);
   process.on("exit", (code) => {
     span.end();
-    void shutdown().finally(() => {     console.log("exit called");
-      process.exit(code)});
-  })
+    void shutdown().finally(() => {
+      console.log("exit called");
+      process.exit(code);
+    });
+  });
   //
   // traceStartingFromContext("child-process-registration-test", ctx, undefined, () => {
   //
   // })
-})
+});
 
 let pendingRequireNotifications: string[] = [];
 const throttledRequireFlush = throttle(() => {
@@ -67,9 +69,9 @@ if (!workerData || !(workerData as SyncWorkerData).isESBuildDevWorker) {
   const compile = wrap("child-process-registration.compile", (filename: string) => {
     let result = paths[filename];
     if (!result) {
-        const newPaths = trace("SyncWorker.call", () => worker.call(filename));
-        Object.assign(paths, newPaths);
-        result = paths[filename];
+      const newPaths = trace("SyncWorker.call", () => worker.call(filename));
+      Object.assign(paths, newPaths);
+      result = paths[filename];
     }
 
     if (!result) {

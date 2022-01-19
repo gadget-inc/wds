@@ -5,9 +5,8 @@ import globby from "globby";
 import path from "path";
 import { Compiler } from "./Compiler";
 import { ProjectConfig } from "./Options";
+import { traced } from "./Telemetry";
 import { log, projectConfig } from "./utils";
-import {trace, traced} from "./Telemetry";
-import opentelemetry, {context} from "@opentelemetry/api";
 
 // https://esbuild.github.io/api/#resolve-extensions
 const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
@@ -147,7 +146,7 @@ export class SwcCompiler implements Compiler {
         lazy: true,
       },
       ...config,
-    })
+    });
 
     const destination = path.join(this.outDir, filename);
     await fs.mkdir(path.dirname(destination), { recursive: true });
@@ -163,7 +162,7 @@ export class SwcCompiler implements Compiler {
    * Build the group of files at the specified path.
    * If the group has already been built, build only the specified file.
    */
-  @traced("SwcCompiler.buildGroup", undefined, { "filename": 0 })
+  @traced("SwcCompiler.buildGroup", undefined, { filename: 0 })
   private async buildGroup(filename: string): Promise<void> {
     const { root, fileNames, config } = await this.getModule(filename);
 

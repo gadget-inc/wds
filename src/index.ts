@@ -1,5 +1,3 @@
-import * as telemetry from "./Telemetry";
-import {rootTrace, trace, tracer, traceStartingFromContext, wrap} from "./Telemetry";
 import { watch } from "chokidar";
 import findRoot from "find-root";
 import findWorkspaceRoot from "find-yarn-workspace-root";
@@ -16,8 +14,9 @@ import { RunOptions } from "./Options";
 import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
 import { SwcCompiler } from "./SwcCompiler";
+import * as telemetry from "./Telemetry";
+import { rootTrace, trace, tracer } from "./Telemetry";
 import { log, projectConfig } from "./utils";
-import {propagation, ROOT_CONTEXT} from "@opentelemetry/api";
 
 export const cli = async () => {
   const args = yargs(hideBin(process.argv))
@@ -51,13 +50,17 @@ export const cli = async () => {
 
   await telemetry.setup();
 
-  return await rootTrace("esbuild-dev", async () => await esbuildDev({
-    argv: args._ as any,
-    terminalCommands: args.commands,
-    reloadOnChanges: args.watch,
-    supervise: args.supervise,
-    useSwc: args.swc,
-  }));
+  return await rootTrace(
+    "esbuild-dev",
+    async () =>
+      await esbuildDev({
+        argv: args._ as any,
+        terminalCommands: args.commands,
+        reloadOnChanges: args.watch,
+        supervise: args.supervise,
+        useSwc: args.swc,
+      })
+  );
 };
 
 const startTerminalCommandListener = (project: Project) => {
@@ -118,12 +121,12 @@ const startIPCServer = async (socketPath: string, project: Project) => {
   };
 
   const server = new MiniServer({
-    "/compile":  async (request, reply) => {
+    "/compile": async (request, reply) => {
       const results = await trace("/compile", async () => await compile(request.body));
       reply.json({ filenames: results });
     },
     "/file-required": (request, reply) => {
-      console.log("file-required", request.raw.headers)
+      console.log("file-required", request.raw.headers);
       for (const filename of request.json()) {
         project.watcher?.add(filename);
       }

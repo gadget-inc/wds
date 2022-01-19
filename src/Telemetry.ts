@@ -1,9 +1,9 @@
 import * as opentelemetry from "@opentelemetry/api";
-import { registerInstrumentations } from "@opentelemetry/instrumentation";
-import {Context, ROOT_CONTEXT, Span, SpanOptions, SpanStatusCode} from "@opentelemetry/api";
-import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
+import { Context, ROOT_CONTEXT, Span, SpanOptions, SpanStatusCode } from "@opentelemetry/api";
 import { JaegerExporter } from "@opentelemetry/exporter-jaeger";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { registerInstrumentations } from "@opentelemetry/instrumentation";
+import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { Resource } from "@opentelemetry/resources";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { ConsoleSpanExporter, InMemorySpanExporter, SimpleSpanProcessor, SpanExporter } from "@opentelemetry/sdk-trace-base";
@@ -35,9 +35,7 @@ if (process.env.ESBUILD_DEV_JAEGER_URL) {
 }
 
 registerInstrumentations({
-  instrumentations: [
-    new HttpInstrumentation({}),
-  ],
+  instrumentations: [new HttpInstrumentation({})],
 });
 
 const spanProcessor = new SimpleSpanProcessor(exporter);
@@ -55,7 +53,7 @@ let started = false;
 
 export async function setup(log = false) {
   await sdk.start();
-  started = true
+  started = true;
 }
 
 export const tracer = opentelemetry.trace.getTracer("esbuild-dev");
@@ -71,12 +69,7 @@ const errorMessage = (error: unknown) => {
 };
 
 /** Run a function within a traced span. Uses the currently active context to find a parent span.  */
-export function traceStartingFromContext<T>(
-  name: string,
-  context: Context,
-  options: SpanOptions | undefined,
-  fn: (span: Span) => T
-): T {
+export function traceStartingFromContext<T>(name: string, context: Context, options: SpanOptions | undefined, fn: (span: Span) => T): T {
   const span = tracer.startSpan(name, options, context);
   return opentelemetry.context.with(opentelemetry.trace.setSpan(context, span), () => {
     try {
@@ -90,7 +83,7 @@ export function traceStartingFromContext<T>(
             span.end();
           });
       } else {
-        span.end()
+        span.end();
       }
       return result;
     } catch (err) {
@@ -135,7 +128,12 @@ export function rootTrace<T>(name: string, fnOrOptions: SpanOptions | (() => T),
 }
 
 /** Wrap a function in tracing, and return it  */
-export const wrap = <T extends (...args: any[]) => any>(name: string, func: T, options?: SpanOptions, spanAttributes: SpanArgumentProperties = {}): T => {
+export const wrap = <T extends (...args: any[]) => any>(
+  name: string,
+  func: T,
+  options?: SpanOptions,
+  spanAttributes: SpanArgumentProperties = {}
+): T => {
   return function (this: any, ...args: Parameters<T>) {
     const span = tracer.startSpan(name, options, opentelemetry.context.active());
     for (const name in spanAttributes) {
@@ -144,17 +142,17 @@ export const wrap = <T extends (...args: any[]) => any>(name: string, func: T, o
     }
     return opentelemetry.context.with(opentelemetry.trace.setSpan(opentelemetry.context.active(), span), () => {
       try {
-        const result = func.call(this, ...args);;
+        const result = func.call(this, ...args);
         if (result instanceof Promise) {
           result
-          .catch((err) => {
-            span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage(err) });
-          })
-          .finally(() => {
-            span.end();
-          });
+            .catch((err) => {
+              span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage(err) });
+            })
+            .finally(() => {
+              span.end();
+            });
         } else {
-          span.end()
+          span.end();
         }
         return result;
       } catch (err) {
@@ -167,8 +165,8 @@ export const wrap = <T extends (...args: any[]) => any>(name: string, func: T, o
 };
 
 export type SpanArgumentProperties = {
-  [key: string]: number,
-}
+  [key: string]: number;
+};
 
 /** Method decorator */
 export const traced = (name: string, options?: SpanOptions, spanAttributes?: SpanArgumentProperties) => {

@@ -1,11 +1,10 @@
-import * as opentelemetry from "@opentelemetry/api";
-// have to use a module import like this so we can re-access imported properties as they might change, see https://github.com/nodejs/node/issues/36531
-import {rootTrace, setup, shutdown, trace, traced, traceStartingFromContext} from "./Telemetry";
+import { Context, propagation, ROOT_CONTEXT } from "@opentelemetry/api";
 import { promises as fs } from "fs";
-import workerThreads, { MessageChannel, MessagePort, receiveMessageOnPort, Worker } from "worker_threads";
-import { log } from "./utils";
-import {Context, propagation, ROOT_CONTEXT} from "@opentelemetry/api";
 import process from "process";
+import workerThreads, { MessageChannel, MessagePort, receiveMessageOnPort, Worker } from "worker_threads";
+// have to use a module import like this so we can re-access imported properties as they might change, see https://github.com/nodejs/node/issues/36531
+import { setup, shutdown, trace, traceStartingFromContext } from "./Telemetry";
+import { log } from "./utils";
 
 log.debug("syncworker file boot", { isMainThread: workerThreads.isMainThread, hasWorkerData: !!workerThreads.workerData });
 
@@ -133,19 +132,19 @@ if (!workerThreads.isMainThread) {
 
         try {
           const result = await trace("child.worker-thread.compiling", async () => {
-            return await implementation(...call.args)
+            return await implementation(...call.args);
           });
-          port.postMessage({id: call.id, result});
+          port.postMessage({ id: call.id, result });
         } catch (error) {
           void file?.write(`error running syncworker: ${JSON.stringify(error)}\n`);
-          port.postMessage({id: call.id, error});
+          port.postMessage({ id: call.id, error });
         }
 
         // First, change the shared value. That way if the main thread attempts to wait for us after this point, the wait will fail because the shared value has changed.
         Atomics.add(sharedBufferView, 0, 1);
         // Then, wake the main thread. This handles the case where the main thread was already waiting for us before the shared value was changed.
         Atomics.notify(sharedBufferView, 0, Infinity);
-      })
+      });
     };
 
     port.addListener("message", (message) => {
@@ -163,12 +162,12 @@ if (!workerThreads.isMainThread) {
 
   const time = process.hrtime.bigint();
   void setup(true).then(() => {
-    console.log("Time to setup: ", (process.hrtime.bigint() - time)/1_000_000n);
+    console.log("Time to setup: ", (process.hrtime.bigint() - time) / 1_000_000n);
     const ctx = propagation.extract(ROOT_CONTEXT, process.env);
     void runWorker(ctx);
 
     process.on("exit", () => {
       void shutdown();
-    })
-  })
+    });
+  });
 }
