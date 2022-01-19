@@ -4,7 +4,7 @@ import {rootTrace, setup, shutdown, trace, traced, traceStartingFromContext} fro
 import { promises as fs } from "fs";
 import workerThreads, { MessageChannel, MessagePort, receiveMessageOnPort, Worker } from "worker_threads";
 import { log } from "./utils";
-import {propagation, ROOT_CONTEXT} from "@opentelemetry/api";
+import {Context, propagation, ROOT_CONTEXT} from "@opentelemetry/api";
 import process from "process";
 
 log.debug("syncworker file boot", { isMainThread: workerThreads.isMainThread, hasWorkerData: !!workerThreads.workerData });
@@ -117,10 +117,10 @@ export class SyncWorker {
 
 // This file re-executes itself in the worker thread. Actually run the worker code within the inner thread if we're the inner thread
 if (!workerThreads.isMainThread) {
-  const runWorker = async () => {
+  const runWorker = async (ctx: Context) => {
     // try to be immune to https://github.com/nodejs/node/issues/36531
     const workerData: SyncWorkerData | undefined = workerThreads.workerData;
-    if (!workerData) return setImmediate(runWorker as any); // eslint-disable-line @typescript-eslint/no-implied-eval
+    if (!workerData) return setImmediate(runWorker as any, ctx); // eslint-disable-line @typescript-eslint/no-implied-eval
     if (!workerData.isESBuildDevWorker) return;
 
     const file = process.env["ESBUILD_DEV_DEBUG"] ? await fs.open("/tmp/esbuild-dev-debug-log.txt", "w") : undefined;
@@ -128,22 +128,24 @@ if (!workerThreads.isMainThread) {
     const port: MessagePort = workerData.port;
 
     const handleCall = async (call: SyncWorkerCall) => {
-      const sharedBufferView = new Int32Array(call.sharedBuffer);
+      await traceStartingFromContext("handleCall", ctx, undefined, async () => {
+        const sharedBufferView = new Int32Array(call.sharedBuffer);
 
-      try {
-        const result = await trace("child.worker-thread.compiling", async () => {
-          return await implementation(...call.args)
-        });
-        port.postMessage({ id: call.id, result });
-      } catch (error) {
-        void file?.write(`error running syncworker: ${JSON.stringify(error)}\n`);
-        port.postMessage({ id: call.id, error });
-      }
+        try {
+          const result = await trace("child.worker-thread.compiling", async () => {
+            return await implementation(...call.args)
+          });
+          port.postMessage({id: call.id, result});
+        } catch (error) {
+          void file?.write(`error running syncworker: ${JSON.stringify(error)}\n`);
+          port.postMessage({id: call.id, error});
+        }
 
-      // First, change the shared value. That way if the main thread attempts to wait for us after this point, the wait will fail because the shared value has changed.
-      Atomics.add(sharedBufferView, 0, 1);
-      // Then, wake the main thread. This handles the case where the main thread was already waiting for us before the shared value was changed.
-      Atomics.notify(sharedBufferView, 0, Infinity);
+        // First, change the shared value. That way if the main thread attempts to wait for us after this point, the wait will fail because the shared value has changed.
+        Atomics.add(sharedBufferView, 0, 1);
+        // Then, wake the main thread. This handles the case where the main thread was already waiting for us before the shared value was changed.
+        Atomics.notify(sharedBufferView, 0, Infinity);
+      })
     };
 
     port.addListener("message", (message) => {
@@ -161,14 +163,10 @@ if (!workerThreads.isMainThread) {
 
   void setup(true).then(() => {
     const ctx = propagation.extract(ROOT_CONTEXT, process.env);
-    console.log(ctx);
+    void runWorker(ctx);
 
     process.on("exit", () => {
       void shutdown();
-    })
-
-    traceStartingFromContext("runWorker", ctx, undefined, () => {
-      return runWorker();
     })
   })
 }

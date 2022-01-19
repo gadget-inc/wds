@@ -51,7 +51,7 @@ export const cli = async () => {
 
   await telemetry.setup();
 
-  return await rootTrace("esbuild-dev", () => esbuildDev({
+  return await rootTrace("esbuild-dev", async () => await esbuildDev({
     argv: args._ as any,
     terminalCommands: args.commands,
     reloadOnChanges: args.watch,
