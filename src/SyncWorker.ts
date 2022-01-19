@@ -161,7 +161,9 @@ if (!workerThreads.isMainThread) {
     void file?.write(`sync worker booted\n`);
   };
 
+  const time = process.hrtime.bigint();
   void setup(true).then(() => {
+    console.log("Time to setup: ", (process.hrtime.bigint() - time)/1_000_000n);
     const ctx = propagation.extract(ROOT_CONTEXT, process.env);
     void runWorker(ctx);
 

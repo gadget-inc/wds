@@ -4,11 +4,13 @@ import { EventEmitter } from "events";
 import { RunOptions } from "./Options";
 import { Project } from "./Project";
 import { log } from "./utils";
-import {propagation} from "@opentelemetry/api";
+import {propagation, Span} from "@opentelemetry/api";
+import {traced, tracer} from "./Telemetry";
 
 /** */
 export class Supervisor extends EventEmitter {
   process!: ChildProcess;
+  span!: Span;
   constructor(readonly argv: string[], readonly socketPath: string, readonly options: RunOptions, readonly project: Project) {
     super();
   }
@@ -16,6 +18,7 @@ export class Supervisor extends EventEmitter {
   stop() {
     if (this.process) {
       log.debug("sending term");
+      this.span.end();
       this.process.kill("SIGTERM");
     }
     const process = this.process;
@@ -23,6 +26,8 @@ export class Supervisor extends EventEmitter {
       if (!process.killed) {
         log.debug("sending kill");
         process.kill("SIGKILL");
+      } else {
+        this.span.end();
       }
     }, 5000);
   }
@@ -30,12 +35,14 @@ export class Supervisor extends EventEmitter {
   kill() {
     if (this.process) {
       this.process.kill("SIGKILL");
+      this.span.end();
     }
   }
 
   restart() {
     if (this.process) {
       this.process.kill("SIGKILL");
+      this.span.end();
     }
 
     const env = {
@@ -44,6 +51,8 @@ export class Supervisor extends EventEmitter {
       ESBUILD_DEV_EXTENSIONS: this.project.config.extensions.join(","),
       ESBUILD_DEV_JAEGER_URL: process.env.ESBUILD_DEV_JAEGER_URL,
     };
+
+    this.span = tracer.startSpan("Supervisor.restart");
     propagation.inject(opentelemetry.context.active(), env);
     this.process = spawn("node", this.argv, {
       cwd: process.cwd(),
@@ -53,7 +62,7 @@ export class Supervisor extends EventEmitter {
 
     this.process.on("message", (value) => this.emit("message", value));
     this.process.on("exit", (code, signal) => {
-      // span.end();
+      this.span.end();
       if (signal !== "SIGKILL" && this.options.supervise) {
         log.warn(`process exited with ${code}`);
       }

@@ -54,11 +54,6 @@ export async function shutdown() {
 let started = false;
 
 export async function setup(log = false) {
-  // if (log) {
-  //   console.log(exporter);
-  //   console.log(sdk);
-  //   console.log(started);
-  // }
   await sdk.start();
   started = true
 }

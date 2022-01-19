@@ -1,5 +1,5 @@
 import * as telemetry from "./Telemetry";
-import {rootTrace, trace, traceStartingFromContext, wrap} from "./Telemetry";
+import {rootTrace, trace, tracer, traceStartingFromContext, wrap} from "./Telemetry";
 import { watch } from "chokidar";
 import findRoot from "find-root";
 import findWorkspaceRoot from "find-yarn-workspace-root";
@@ -144,6 +144,7 @@ const childProcessArgs = () => {
 };
 
 export const esbuildDev = async (options: RunOptions) => {
+  const span = tracer.startSpan("esbuildDev");
   const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "esbuild-dev"));
   log.debug(`starting esbuild-dev for workspace root ${workspaceRoot} and workdir ${workDir}`);
@@ -171,11 +172,13 @@ export const esbuildDev = async (options: RunOptions) => {
   await project.invalidateBuildSetAndReload();
 
   process.on("SIGINT", () => {
+    span.end();
     log.debug(`process ${process.pid} got SIGINT`);
 
     void telemetry.shutdown().finally(() => project.shutdown(0));
   });
   process.on("SIGTERM", () => {
+    span.end();
     log.debug(`process ${process.pid} got SIGTERM`);
     void telemetry.shutdown().finally(() => project.shutdown(0));
   });
@@ -183,6 +186,7 @@ export const esbuildDev = async (options: RunOptions) => {
   project.supervisor.process.on("exit", (code) => {
     log.debug(`child process exited with code ${code}, ${options.supervise ? "not exiting because supervise mode" : "exiting..."}`);
     if (!options.supervise) {
+      span.end();
       void telemetry.shutdown().finally(() => project.shutdown(code ?? 1));
     }
   });
