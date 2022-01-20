@@ -1,9 +1,9 @@
+import { setup, shutdown, trace, traceStartingFromContext } from "./Telemetry";
 import { Context, propagation, ROOT_CONTEXT } from "@opentelemetry/api";
 import { promises as fs } from "fs";
 import process from "process";
 import workerThreads, { MessageChannel, MessagePort, receiveMessageOnPort, Worker } from "worker_threads";
 // have to use a module import like this so we can re-access imported properties as they might change, see https://github.com/nodejs/node/issues/36531
-import { setup, shutdown, trace, traceStartingFromContext } from "./Telemetry";
 import { log } from "./utils";
 
 log.debug("syncworker file boot", { isMainThread: workerThreads.isMainThread, hasWorkerData: !!workerThreads.workerData });
@@ -165,9 +165,9 @@ if (!workerThreads.isMainThread) {
     console.log("Time to setup: ", (process.hrtime.bigint() - time) / 1_000_000n);
     const ctx = propagation.extract(ROOT_CONTEXT, process.env);
     void runWorker(ctx);
-
-    process.on("exit", () => {
-      void shutdown();
-    });
+    //
+    // process.on("exit", () => {
+    //   void shutdown();
+    // });
   });
 }

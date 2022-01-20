@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import http from "http";
 import { wrap } from "./Telemetry";
+import http from "http";
 import { log } from "./utils";
 
 // async function to ask the leader process to do the compilation and hand us back a list of newly compiled source filenames to compiled filenames

@@ -1,10 +1,10 @@
+import { tracer } from "./Telemetry";
 import * as opentelemetry from "@opentelemetry/api";
 import { propagation, Span } from "@opentelemetry/api";
 import { ChildProcess, spawn } from "child_process";
 import { EventEmitter } from "events";
 import { RunOptions } from "./Options";
 import { Project } from "./Project";
-import { tracer } from "./Telemetry";
 import { log } from "./utils";
 
 /** */

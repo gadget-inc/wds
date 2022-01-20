@@ -1,3 +1,4 @@
+import { traced } from "./Telemetry";
 import { Config, transformFile } from "@swc/core";
 import findRoot from "find-root";
 import * as fs from "fs/promises";
@@ -5,7 +6,6 @@ import globby from "globby";
 import path from "path";
 import { Compiler } from "./Compiler";
 import { ProjectConfig } from "./Options";
-import { traced } from "./Telemetry";
 import { log, projectConfig } from "./utils";
 
 // https://esbuild.github.io/api/#resolve-extensions
@@ -77,8 +77,10 @@ export class SwcCompiler implements Compiler {
     const existingFile = this.compiledFiles.existingFile(filename);
 
     if (existingFile) {
+      console.log(`compile calling buildFile ${filename}`)
       await this.buildFile(filename, existingFile.root, existingFile.config);
     } else {
+      console.log(`compile calling buildGroup ${filename}`)
       await this.buildGroup(filename);
     }
 

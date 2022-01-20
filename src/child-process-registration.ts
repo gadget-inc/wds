@@ -1,9 +1,9 @@
+import { setup, shutdown, trace, tracer, wrap } from "./Telemetry";
 import * as opentelemetry from "@opentelemetry/api";
 import { propagation, ROOT_CONTEXT } from "@opentelemetry/api";
 import { throttle } from "lodash";
 import process from "process";
 import { SyncWorkerData } from "./SyncWorker";
-import { setup, shutdown, trace, tracer, wrap } from "./Telemetry";
 import { log } from "./utils";
 
 /* eslint-disable @typescript-eslint/no-var-requires */
@@ -13,21 +13,24 @@ const path = require("path");
 const { SyncWorker } = require("./SyncWorker");
 const { workerData } = require("worker_threads");
 
+console.log((process as any)._preload_modules.find((e: string) => e.endsWith(path.basename(__filename))));
+
 // TODO: This isn't working.
 // I have to look into making it propagage the host context while also
 // not quit immediately.
 void setup().then(() => {
   const ctx = propagation.extract(ROOT_CONTEXT, process.env);
 
-  const span = tracer.startSpan("child-start-span", undefined, ctx);
-  opentelemetry.trace.setSpan(ctx, span);
-  process.on("exit", (code) => {
-    span.end();
-    void shutdown().finally(() => {
+  tracer.startActiveSpan("child-start-span", {}, ctx, (span) => {
+    console.log("started child span");
+    process.on("beforeExit", (code) => {
+      span.end();
       console.log("exit called");
-      process.exit(code);
+      void shutdown().finally(() => {
+        console.log("finished");
+      })
     });
-  });
+  })
   //
   // traceStartingFromContext("child-process-registration-test", ctx, undefined, () => {
   //

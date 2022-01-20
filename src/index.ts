@@ -1,3 +1,5 @@
+import * as telemetry from "./Telemetry";
+import { rootTrace, trace, tracer } from "./Telemetry";
 import { watch } from "chokidar";
 import findRoot from "find-root";
 import findWorkspaceRoot from "find-yarn-workspace-root";
@@ -14,8 +16,6 @@ import { RunOptions } from "./Options";
 import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
 import { SwcCompiler } from "./SwcCompiler";
-import * as telemetry from "./Telemetry";
-import { rootTrace, trace, tracer } from "./Telemetry";
 import { log, projectConfig } from "./utils";
 
 export const cli = async () => {
@@ -50,17 +50,13 @@ export const cli = async () => {
 
   await telemetry.setup();
 
-  return await rootTrace(
-    "esbuild-dev",
-    async () =>
-      await esbuildDev({
-        argv: args._ as any,
-        terminalCommands: args.commands,
-        reloadOnChanges: args.watch,
-        supervise: args.supervise,
-        useSwc: args.swc,
-      })
-  );
+  await esbuildDev({
+    argv: args._ as any,
+    terminalCommands: args.commands,
+    reloadOnChanges: args.watch,
+    supervise: args.supervise,
+    useSwc: args.swc,
+  });
 };
 
 const startTerminalCommandListener = (project: Project) => {
@@ -126,7 +122,6 @@ const startIPCServer = async (socketPath: string, project: Project) => {
       reply.json({ filenames: results });
     },
     "/file-required": (request, reply) => {
-      console.log("file-required", request.raw.headers);
       for (const filename of request.json()) {
         project.watcher?.add(filename);
       }
@@ -147,50 +142,51 @@ const childProcessArgs = () => {
 };
 
 export const esbuildDev = async (options: RunOptions) => {
-  const span = tracer.startSpan("esbuildDev");
-  const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
-  const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "esbuild-dev"));
-  log.debug(`starting esbuild-dev for workspace root ${workspaceRoot} and workdir ${workDir}`);
+  await tracer.startActiveSpan("esbuildDev", async (span) => {
+    const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
+    const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "esbuild-dev"));
+    log.debug(`starting esbuild-dev for workspace root ${workspaceRoot} and workdir ${workDir}`);
 
-  let serverSocketPath: string;
-  if (os.platform() === "win32") {
-    serverSocketPath = path.join("\\\\?\\pipe", workDir, "ipc.sock");
-  } else {
-    serverSocketPath = path.join(workDir, "ipc.sock");
-  }
-
-  const config = await projectConfig(findRoot(process.cwd()));
-  const compiler = options.useSwc ? new SwcCompiler(workspaceRoot, workDir) : new EsBuildCompiler(workspaceRoot, workDir);
-
-  const project = new Project(workspaceRoot, config, compiler);
-  project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
-
-  // console.log(result);
-  if (options.reloadOnChanges) startFilesystemWatcher(project);
-  if (options.terminalCommands) startTerminalCommandListener(project);
-  await startIPCServer(serverSocketPath, project);
-
-  // kickoff the first child process
-  options.supervise && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
-  await project.invalidateBuildSetAndReload();
-
-  process.on("SIGINT", () => {
-    span.end();
-    log.debug(`process ${process.pid} got SIGINT`);
-
-    void telemetry.shutdown().finally(() => project.shutdown(0));
-  });
-  process.on("SIGTERM", () => {
-    span.end();
-    log.debug(`process ${process.pid} got SIGTERM`);
-    void telemetry.shutdown().finally(() => project.shutdown(0));
-  });
-
-  project.supervisor.process.on("exit", (code) => {
-    log.debug(`child process exited with code ${code}, ${options.supervise ? "not exiting because supervise mode" : "exiting..."}`);
-    if (!options.supervise) {
-      span.end();
-      void telemetry.shutdown().finally(() => project.shutdown(code ?? 1));
+    let serverSocketPath: string;
+    if (os.platform() === "win32") {
+      serverSocketPath = path.join("\\\\?\\pipe", workDir, "ipc.sock");
+    } else {
+      serverSocketPath = path.join(workDir, "ipc.sock");
     }
-  });
+
+    const config = await projectConfig(findRoot(process.cwd()));
+    const compiler = options.useSwc ? new SwcCompiler(workspaceRoot, workDir) : new EsBuildCompiler(workspaceRoot, workDir);
+
+    const project = new Project(workspaceRoot, config, compiler);
+    project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
+
+    // console.log(result);
+    if (options.reloadOnChanges) startFilesystemWatcher(project);
+    if (options.terminalCommands) startTerminalCommandListener(project);
+    await startIPCServer(serverSocketPath, project);
+
+    // kickoff the first child process
+    options.supervise && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
+    await project.invalidateBuildSetAndReload();
+
+    process.on("SIGINT", () => {
+      span.end();
+      log.debug(`process ${process.pid} got SIGINT`);
+
+      void telemetry.shutdown().finally(() => project.shutdown(0));
+    });
+    process.on("SIGTERM", () => {
+      span.end();
+      log.debug(`process ${process.pid} got SIGTERM`);
+      void telemetry.shutdown().finally(() => project.shutdown(0));
+    });
+
+    project.supervisor.process.on("exit", (code) => {
+      log.debug(`child process exited with code ${code}, ${options.supervise ? "not exiting because supervise mode" : "exiting..."}`);
+      if (!options.supervise) {
+        span.end();
+        void telemetry.shutdown().finally(() => project.shutdown(code ?? 1));
+      }
+    });
+  })
 };

@@ -8,14 +8,26 @@ import { Resource } from "@opentelemetry/resources";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { ConsoleSpanExporter, InMemorySpanExporter, SimpleSpanProcessor, SpanExporter } from "@opentelemetry/sdk-trace-base";
 import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
+import workerThreads from "worker_threads";
+import process from "process";
+import path from "path";
 
 export type TelemetryOptions = {
   jaegerUrl?: string;
   console?: boolean;
 };
 
+let serviceName;
+if (!workerThreads.isMainThread) {
+  serviceName = "esbuild-dev child SyncWorker"
+} else if ((process as any)._preload_modules.find((e: string) => e.endsWith(path.basename("child-process-registration.js")))) {
+  serviceName = "esbuild-dev child"
+} else {
+  serviceName = "esbuild-dev";
+}
+
 const resource = new Resource({
-  [SemanticResourceAttributes.SERVICE_NAME]: "esbuild-dev",
+  [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
 });
 
 let exporter: SpanExporter;
@@ -44,6 +56,7 @@ export const sdk = new NodeSDK({
   traceExporter: exporter,
   spanProcessor,
   instrumentations: [],
+  autoDetectResources: false,
 });
 
 export async function shutdown() {
