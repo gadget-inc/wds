@@ -22,7 +22,7 @@
     "LICENSE.txt"
   ],
   "scripts": {
-    "build": "rm -rf pkg && tsc && chmod +x pkg/esbuild-dev.bin.js",
+    "build": "rm -rf pkg && tsc && chmod +x pkg/esbuild-dev.bin.js pkg/esbuild-dev-bench.bin.js",
     "prepublishOnly": "yarn run build",
     "watch": "tsc -w",
     "typecheck": "tsc --noEmit",
