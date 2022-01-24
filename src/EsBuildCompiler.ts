@@ -133,7 +133,7 @@ export class EsBuildCompiler implements Compiler {
         this.fileToGroupMap[file] = fileNames;
       }
 
-      for (const [output, details] of Object.entries(build.metafile!.outputs)) {
+      for (const [output, details] of Object.entries(build.metafile.outputs)) {
         if (details.entryPoint) {
           this.fileToDestinationMap[path.join(root, details.entryPoint)] = path.resolve(output);
         }
