@@ -1,37 +1,56 @@
-import { spawn } from "child_process";
+import { ChildProcessByStdio, spawn } from "child_process";
+import * as fs from "fs/promises";
 import path from "path";
+import { Readable } from "stream";
+import { log } from "../utils";
 import { json } from "./json";
 import { ChildProcessResult, MARKER } from "./protocol";
 
-async function spawnOnce(runNum: number): Promise<ChildProcessResult> {
-  return await new Promise((resolve, reject) => {
-    const childProcess = spawn(
-      path.resolve("pkg/esbuild-dev.bin.js"),
-      ["-r", path.resolve("pkg/bench/bench-child-hooks.js"), path.resolve("pkg/bench/scripts/noop.js")],
-      {
-        stdio: ["ignore", "pipe", "inherit"],
+type ChildProcess = ChildProcessByStdio<null, Readable, null>;
+
+function monitorLogs(childProcess: ChildProcess): Promise<ChildProcessResult> {
+  return new Promise((resolve, reject) => {
+    const onEnd = () => {
+      childProcess.stdout.removeListener("data", onData);
+      childProcess.stdout.removeListener("end", onEnd);
+      return reject("Failed to find metric output line in child process. Did it terminate correctly?");
+    };
+    const onData = (data: Buffer) => {
+      const str = data.toString("utf-8");
+      const line = str.split("\n").find((l: string) => l.startsWith(MARKER));
+      if (line) {
+        const metrics = json.parse(line.replace(MARKER, ""));
+        childProcess.stdout.removeListener("data", onData);
+        childProcess.stdout.removeListener("end", onEnd);
+        return resolve(metrics);
       }
-    );
-
-    const chunks: Uint8Array[] = [];
-    childProcess.stdout.on("data", (data) => chunks.push(data));
-    childProcess.stdout.on("end", () => {
-      const str = Buffer.concat(chunks).toString("utf-8");
-      const line = str.split("\n").find((l) => l.startsWith(MARKER));
-
-      if (!line) {
-        return reject("Failed to find metric output line in child process. Did it terminate correctly?");
-      }
-
-      const metrics = json.parse(line.replace(MARKER, ""));
-      resolve(metrics);
-    });
+    };
+    childProcess.stdout.on("data", onData);
+    childProcess.stdout.on("end", onEnd);
   });
 }
 
-export type bootArgs = {
-  runs: number;
-};
+function spawnOnce(args: { supervise?: boolean; filename: string; swc: boolean }): ChildProcess {
+  const extraArgs = [];
+
+  if (args.supervise) {
+    extraArgs.push("--supervise");
+    extraArgs.push("--watch");
+  }
+
+  if (args.swc) {
+    extraArgs.push("--swc");
+  }
+
+  const binPath = path.resolve("pkg/esbuild-dev.bin.js");
+  const allArgs = [...extraArgs, "-r", path.resolve("pkg/bench/bench-child-hooks.js"), args.filename];
+
+  log.debug(binPath, ...allArgs);
+
+  return spawn(binPath, allArgs, {
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+}
 
 type RunResult = {
   startTime: bigint;
@@ -82,14 +101,32 @@ function report(results: Array<RunResult>): Record<string, Record<string, number
   };
 }
 
-export async function boot(args: bootArgs): Promise<void> {
+export type BenchArgs = {
+  swc: boolean;
+  runs: number;
+  argv: Array<string>;
+};
+
+function execPath(args: BenchArgs): string {
+  let filepath;
+  if (args.argv.length === 0) {
+    filepath = path.resolve("src/bench/scripts/noop.ts");
+  } else {
+    filepath = args.argv[0];
+  }
+
+  return filepath;
+}
+
+export async function benchBoot(args: BenchArgs): Promise<void> {
   const results: Array<RunResult> = [];
 
-  process.stdout.write("Starting boot benchmark\n");
+  process.stdout.write(`Starting boot benchmark (pid=${process.pid})\n`);
 
   for (let i = 0; i < args.runs; i++) {
     const startTime = process.hrtime.bigint();
-    const result = await spawnOnce(i);
+    const childProcess = spawnOnce({ filename: execPath(args), swc: args.swc });
+    const result = await monitorLogs(childProcess);
     const endTime = process.hrtime.bigint();
     results.push({
       startTime,
@@ -99,6 +136,41 @@ export async function boot(args: bootArgs): Promise<void> {
     });
     process.stdout.write(".");
   }
+
+  process.stdout.write("\n");
+
+  console.table(report(results));
+}
+
+export async function benchReload(args: BenchArgs): Promise<void> {
+  const results: Array<RunResult> = [];
+  const filepath = execPath(args);
+  const file = await fs.open(filepath, "r+");
+
+  process.stdout.write(`Starting reload benchmark (pid=${process.pid})\n`);
+
+  const childProcess = spawnOnce({ supervise: true, filename: filepath, swc: args.swc });
+  const _ignoreInitialBoot = await monitorLogs(childProcess);
+
+  for (let i = 0; i < args.runs; i++) {
+    const now = new Date();
+    const startTime = process.hrtime.bigint();
+
+    await file.utimes(now, now);
+    const [result] = await Promise.all([monitorLogs(childProcess), file.sync()]);
+
+    const endTime = process.hrtime.bigint();
+    results.push({
+      startTime,
+      endTime,
+      duration: Number(endTime - startTime),
+      metrics: result,
+    });
+    process.stdout.write(".");
+  }
+
+  await file.close();
+  childProcess.kill();
 
   process.stdout.write("\n");
 

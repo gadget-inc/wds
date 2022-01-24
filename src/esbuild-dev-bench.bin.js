@@ -1,15 +1,18 @@
 #!/usr/bin/env node --enable-source-maps
 "use strict";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { boot } from "./bench/bench";
+import { benchBoot, benchReload } from "./bench/bench";
 
 export const cli = async () => {
   const args = yargs(hideBin(process.argv))
     .option("runs", {
       type: "number",
       default: 10,
+    })
+    .option("swc", {
+      type: "boolean",
+      description: "Use the SWC compiler",
     })
     .option("type", {
       choices: ["boot", "reload"],
@@ -20,9 +23,22 @@ export const cli = async () => {
       default: "",
     }).argv;
 
-  if (args.type === "boot") {
-    await boot(args);
+  const benchArgs = {
+    runs: args.runs,
+    argv: args._,
+    swc: args.swc,
+  };
+
+  switch (args.type) {
+    case "boot":
+      await benchBoot(benchArgs);
+      break;
+    case "reload":
+      await benchReload(benchArgs);
+      break;
+    default:
+      throw new Error(`Unhandled type of benchmark: ${args.type}`);
   }
 };
 
-cli();
+void cli();
