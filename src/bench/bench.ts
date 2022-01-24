@@ -9,10 +9,11 @@ import { ChildProcessResult, MARKER } from "./protocol";
 type ChildProcess = ChildProcessByStdio<null, Readable, null>;
 
 function monitorLogs(childProcess: ChildProcess): Promise<ChildProcessResult> {
+  const childStdOut = childProcess.stdout;
   return new Promise((resolve, reject) => {
     const onEnd = () => {
-      childProcess.stdout.removeListener("data", onData);
-      childProcess.stdout.removeListener("end", onEnd);
+      childStdOut.removeListener("data", onData);
+      childStdOut.removeListener("end", onEnd);
       return reject("Failed to find metric output line in child process. Did it terminate correctly?");
     };
     const onData = (data: Buffer) => {
@@ -20,13 +21,13 @@ function monitorLogs(childProcess: ChildProcess): Promise<ChildProcessResult> {
       const line = str.split("\n").find((l: string) => l.startsWith(MARKER));
       if (line) {
         const metrics = json.parse(line.replace(MARKER, ""));
-        childProcess.stdout.removeListener("data", onData);
-        childProcess.stdout.removeListener("end", onEnd);
+        childStdOut.removeListener("data", onData);
+        childStdOut.removeListener("end", onEnd);
         return resolve(metrics);
       }
     };
-    childProcess.stdout.on("data", onData);
-    childProcess.stdout.on("end", onEnd);
+    childStdOut.on("data", onData);
+    childStdOut.on("end", onEnd);
   });
 }
 
