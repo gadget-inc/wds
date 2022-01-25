@@ -1,4 +1,4 @@
-import { Config, transformFile } from "@swc/core";
+import { Config, Options, transformFile } from "@swc/core";
 import findRoot from "find-root";
 import * as fs from "fs/promises";
 import globby from "globby";
@@ -122,10 +122,10 @@ export class SwcCompiler implements Compiler {
     const root = findRoot(filename);
     const config = await projectConfig(root);
 
-    let swcConfig: Config;
+    let swcConfig: Options;
 
     if (config.swc === ".swcrc") {
-      swcConfig = await this.findSwcrcRecursive(root, filename);
+      swcConfig = { swcrc: true };
     } else if (config.swc === undefined) {
       swcConfig = SWC_DEFAULTS;
     } else {
@@ -143,27 +143,6 @@ export class SwcCompiler implements Compiler {
     }
 
     return { root, fileNames, swcConfig };
-  }
-
-  private async findSwcrcRecursive(root: string, filename: string) {
-    let dirname = filename;
-    while (dirname != root) {
-      dirname = path.dirname(dirname);
-      const swcrcPath = path.join(dirname, ".swcrc");
-      try {
-        await fs.access(swcrcPath);
-      } catch (e: any) {
-        continue;
-      }
-
-      try {
-        const contents = await fs.readFile(swcrcPath, "utf-8");
-        return JSON.parse(contents);
-      } catch (e: any) {
-        log.error(`esbuild-dev.js config specified to import .swcrc, but it could not be loaded; using defaults: ${e.message}`);
-        throw e;
-      }
-    }
   }
 
   private async buildFile(filename: string, root: string, config: Config): Promise<CompiledFile> {

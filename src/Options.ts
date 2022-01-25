@@ -1,7 +1,7 @@
-import { Config as SwcConfig } from "@swc/core";
+import { Options as SwcOptions } from "@swc/core";
 import { BuildOptions } from "esbuild";
 
-type SwcOptions = ".swcrc" | SwcConfig;
+type SwcConfig = ".swcrc" | SwcOptions;
 
 export interface RunOptions {
   argv: string[];
@@ -14,6 +14,6 @@ export interface RunOptions {
 export interface ProjectConfig {
   ignore: string[];
   esbuild?: BuildOptions;
-  swc?: SwcOptions;
+  swc?: SwcConfig;
   extensions: string[];
 }
