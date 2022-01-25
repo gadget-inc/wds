@@ -44,3 +44,14 @@ test("uses the swc config file from esbuild-dev.js", async () => {
   const contentWithoutConfigOverride = await compile("./simple.ts");
   expect(contentWithoutConfigOverride).toContain("strict");
 });
+
+test("uses the .swcrc file if esbuild-dev.js uses 'swc': '.swcrc'", async () => {
+  const contentWithRootSwcrc = await compile("./files_with_swcrc/simple.ts");
+  expect(contentWithRootSwcrc).not.toContain("strict");
+
+  const contentWithNestedSwcrc = await compile("./files_with_swcrc/nested/simple.ts");
+  expect(contentWithNestedSwcrc).toContain("strict");
+
+  const contentWithoutConfigOverride = await compile("./files_with_swcrc/nested/more_nested/simple.ts");
+  expect(contentWithoutConfigOverride).toContain("strict");
+});

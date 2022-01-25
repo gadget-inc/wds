@@ -12,6 +12,26 @@ const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
 
 export class MissingDestinationError extends Error {}
 
+const SWC_DEFAULTS: Config = {
+  env: {
+    targets: {
+      node: 16,
+    },
+  },
+  jsc: {
+    parser: {
+      syntax: "typescript",
+      decorators: true,
+      dynamicImport: true,
+    },
+    target: "es2020",
+  },
+  module: {
+    type: "commonjs",
+    lazy: true,
+  },
+};
+
 export type CompiledFile = { filename: string; root: string; destination: string; config: Config };
 export type Group = { root: string; files: Array<CompiledFile> };
 
@@ -101,6 +121,17 @@ export class SwcCompiler implements Compiler {
   private async getModule(filename: string) {
     const root = findRoot(filename);
     const config = await projectConfig(root);
+
+    let swcConfig: Config;
+
+    if (config.swc === ".swcrc") {
+      swcConfig = await this.findSwcrcRecursive(root, filename);
+    } else if (config.swc === undefined) {
+      swcConfig = SWC_DEFAULTS;
+    } else {
+      swcConfig = config.swc;
+    }
+
     const globs = [...this.fileGlobPatterns(config), ...this.ignoreFileGlobPatterns(config)];
 
     log.debug("searching for filenames", { config, root, globs });
@@ -111,7 +142,28 @@ export class SwcCompiler implements Compiler {
       fileNames = fileNames.map((fileName) => fileName.replace(/\//g, "\\"));
     }
 
-    return { root, fileNames, config };
+    return { root, fileNames, swcConfig };
+  }
+
+  private async findSwcrcRecursive(root: string, filename: string) {
+    let dirname = filename;
+    while (dirname != root) {
+      dirname = path.dirname(dirname);
+      const swcrcPath = path.join(dirname, ".swcrc");
+      try {
+        await fs.access(swcrcPath);
+      } catch (e: any) {
+        continue;
+      }
+
+      try {
+        const contents = await fs.readFile(swcrcPath, "utf-8");
+        return JSON.parse(contents);
+      } catch (e: any) {
+        log.error(`esbuild-dev.js config specified to import .swcrc, but it could not be loaded; using defaults: ${e.message}`);
+        throw e;
+      }
+    }
   }
 
   private async buildFile(filename: string, root: string, config: Config): Promise<CompiledFile> {
@@ -123,27 +175,10 @@ export class SwcCompiler implements Compiler {
       sourceMaps: "inline",
       swcrc: false,
       inlineSourcesContent: true,
-      env: {
-        targets: {
-          node: 16,
-        },
-      },
-      jsc: {
-        parser: {
-          syntax: "typescript",
-          decorators: true,
-          dynamicImport: true,
-        },
-        target: "es2020",
-      },
-      module: {
-        type: "commonjs",
-        lazy: true,
-      },
       ...config,
     });
 
-    const destination = path.join(this.outDir, filename);
+    const destination = path.join(this.outDir, filename).replace(this.workspaceRoot, "");
     await fs.mkdir(path.dirname(destination), { recursive: true });
     await fs.writeFile(destination, output.code);
     const file = { filename, root, destination, config };
@@ -159,10 +194,10 @@ export class SwcCompiler implements Compiler {
    */
   private async buildGroup(filename: string): Promise<void> {
     // TODO: Use the config
-    const { root, fileNames, config } = await this.getModule(filename);
+    const { root, fileNames, swcConfig } = await this.getModule(filename);
 
     await this.reportErrors(async () => {
-      await Promise.all(fileNames.map((filename) => this.buildFile(filename, root, config.swc ?? {})));
+      await Promise.all(fileNames.map((filename) => this.buildFile(filename, root, swcConfig)));
     });
 
     log.debug("started build", {
