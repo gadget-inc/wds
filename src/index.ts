@@ -7,7 +7,6 @@ import path from "path";
 import readline from "readline";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { EsBuildCompiler } from "./EsBuildCompiler";
 import { MiniServer } from "./mini-server";
 import { RunOptions } from "./Options";
 import { Project } from "./Project";
@@ -50,7 +49,6 @@ export const cli = async () => {
     terminalCommands: args.commands,
     reloadOnChanges: args.watch,
     supervise: args.supervise,
-    useSwc: args.swc,
   });
 };
 
@@ -147,8 +145,7 @@ export const esbuildDev = async (options: RunOptions) => {
     serverSocketPath = path.join(workDir, "ipc.sock");
   }
 
-  const compiler = options.useSwc ? new SwcCompiler(workspaceRoot, workDir) : new EsBuildCompiler(workspaceRoot, workDir);
-  const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())), compiler);
+  const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())), new SwcCompiler(workspaceRoot, workDir));
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
 
   if (options.reloadOnChanges) startFilesystemWatcher(project);

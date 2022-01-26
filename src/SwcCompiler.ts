@@ -207,7 +207,7 @@ export class SwcCompiler implements Compiler {
 
   /** The list of globby patterns to use when searching for files to build */
   private fileGlobPatterns(config: ProjectConfig) {
-    const extensions = config.esbuild?.resolveExtensions || DefaultExtensions;
+    const extensions = config.extensions || DefaultExtensions;
 
     return [`**/*{${extensions.join(",")}}`];
   }

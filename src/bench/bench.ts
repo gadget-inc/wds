@@ -44,10 +44,6 @@ function spawnOnce(args: { supervise?: boolean; filename: string; swc: boolean }
     extraArgs.push("--watch");
   }
 
-  if (args.swc) {
-    extraArgs.push("--swc");
-  }
-
   const binPath = path.resolve("pkg/esbuild-dev.bin.js");
   const root = findRoot(args.filename);
   const relativeFilePath = path.relative(root, args.filename);
