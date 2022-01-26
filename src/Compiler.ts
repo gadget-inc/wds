@@ -1,3 +1,5 @@
+export type PathsMap = Record<string, string>;
+
 export type Compiler = {
   /**
    * When a file operation occurs that requires setting up all the esbuild builds again, we run this.
@@ -11,22 +13,12 @@ export type Compiler = {
   invalidateBuildSet(): Promise<void>;
 
   /**
-   * Compiles a new file at `filename`.
-   **/
-  compile(filename: string): Promise<void>;
-
-  /**
-   * For a given input filename, return all the destinations of the files compiled alongside it in its compilation group.
-   **/
-  fileGroup(filename: string): Promise<Record<string, string>>;
-
-  /**
    * Invalidates a compiled file, after it changes on disk.
    */
   invalidate(filename: string): void;
 
   /**
-   * Rebuilds invalidated files
-   */
-  rebuild(): Promise<void>;
+   * Compiles a new file at `filename`. Returns a Promise<PathsMap> containing the files compiled as part of this compilation unit.
+   **/
+  compile(filename: string): Promise<PathsMap>;
 };

@@ -3,15 +3,12 @@ import findRoot from "find-root";
 import * as fs from "fs/promises";
 import globby from "globby";
 import path from "path";
-import { Compiler } from "./Compiler";
+import { Compiler, PathsMap } from "./Compiler";
 import { ProjectConfig } from "./Options";
 import { log, projectConfig } from "./utils";
 
 // https://esbuild.github.io/api/#resolve-extensions
 const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
-
-export class MissingDestinationError extends Error {}
-
 const SWC_DEFAULTS: Config = {
   env: {
     targets: {
@@ -32,10 +29,15 @@ const SWC_DEFAULTS: Config = {
   },
 };
 
-export type CompiledFile = { filename: string; root: string; destination: string; config: Config };
-export type Group = { root: string; files: Array<CompiledFile> };
+export type CompilationTarget = { filename: string; root: string; destination: Promise<string>; config: Config };
+export type Group = { root: string; files: Array<CompilationTarget> };
+export class CompilationError extends Error {
+  constructor(readonly originalError: Error) {
+    super(originalError.message);
+  }
+}
 
-type FileGroup = Map<string, CompiledFile>;
+type FileGroup = Map<string, CompilationTarget>;
 class CompiledFiles {
   private groups: Map<string, FileGroup>;
 
@@ -51,7 +53,7 @@ class CompiledFiles {
     }
   }
 
-  addFile(file: CompiledFile) {
+  addFile(file: CompilationTarget) {
     let group = this.groups.get(file.root);
     if (!group) {
       group = new Map();
@@ -68,7 +70,7 @@ class CompiledFiles {
     }
   }
 
-  existingFile(filename: string): CompiledFile | undefined {
+  existingFile(filename: string): CompilationTarget | undefined {
     for (const [_root, files] of this.groups.entries()) {
       const file = files.get(filename);
       if (file) {
@@ -81,41 +83,69 @@ class CompiledFiles {
 /** Implements TypeScript building using swc */
 export class SwcCompiler implements Compiler {
   private compiledFiles: CompiledFiles;
-  private invalidatedFiles: Set<string>;
   constructor(readonly workspaceRoot: string, readonly outDir: string) {
     this.compiledFiles = new CompiledFiles();
-    this.invalidatedFiles = new Set();
+  }
+
+  async compile(filename: string): Promise<PathsMap> {
+    const group = this.compiledFiles.group(filename);
+
+    if (group) {
+      return await this.mapPaths(group.files);
+    }
+
+    const file = await this.buildGroup(filename);
+    return await this.mapPaths([file]);
+  }
+
+  invalidate(filename: string): void {
+    const existingFile = this.compiledFiles.existingFile(filename);
+
+    if (existingFile) {
+      void this.buildFile(existingFile.filename, existingFile.root, existingFile.config);
+    }
   }
 
   async invalidateBuildSet() {
     this.compiledFiles = new CompiledFiles();
   }
 
-  async compile(filename: string): Promise<void> {
-    const existingFile = this.compiledFiles.existingFile(filename);
-
-    if (existingFile) {
-      await this.buildFile(filename, existingFile.root, existingFile.config);
-    } else {
-      await this.buildGroup(filename);
+  private async mapPaths(compilationTargets: Array<CompilationTarget>): Promise<PathsMap> {
+    const results: PathsMap = {};
+    for (const target of compilationTargets) {
+      results[target.filename] = await target.destination;
     }
-
-    return;
+    return results;
   }
 
-  async fileGroup(filename: string) {
-    const contents: Record<string, string> = {};
-    const group = this.compiledFiles.group(filename);
+  private async buildFile(filename: string, root: string, config: Options): Promise<CompilationTarget> {
+    const destination = path.join(this.outDir, filename).replace(this.workspaceRoot, "");
 
-    if (!group) {
-      throw new MissingDestinationError(await this.missingDestination(filename));
-    }
+    const outputPromise = transformFile(filename, {
+      cwd: root,
+      filename: filename,
+      root: this.workspaceRoot,
+      rootMode: "root",
+      sourceMaps: "inline",
+      swcrc: false,
+      inlineSourcesContent: true,
+      ...config,
+    })
+      .then(async (output) => {
+        await fs.mkdir(path.dirname(destination), { recursive: true });
+        await fs.writeFile(destination, output.code);
+        target.destination = Promise.resolve(destination);
+        return destination;
+      })
+      .catch((e) => {
+        throw new CompilationError(e);
+      });
 
-    for (const file of group.files) {
-      contents[file.filename] = file.destination;
-    }
+    const target = { filename, root, destination: outputPromise, config };
 
-    return contents;
+    this.compiledFiles.addFile(target);
+
+    return target;
   }
 
   private async getModule(filename: string) {
@@ -145,63 +175,33 @@ export class SwcCompiler implements Compiler {
     return { root, fileNames, swcConfig };
   }
 
-  private async buildFile(filename: string, root: string, config: Config): Promise<CompiledFile> {
-    const output = await transformFile(filename, {
-      cwd: root,
-      filename: filename,
-      root: this.workspaceRoot,
-      rootMode: "root",
-      sourceMaps: "inline",
-      swcrc: false,
-      inlineSourcesContent: true,
-      ...config,
-    });
-
-    const destination = path.join(this.outDir, filename).replace(this.workspaceRoot, "");
-    await fs.mkdir(path.dirname(destination), { recursive: true });
-    await fs.writeFile(destination, output.code);
-    const file = { filename, root, destination, config };
-
-    this.compiledFiles.addFile(file);
-
-    return file;
-  }
-
   /**
    * Build the group of files at the specified path.
-   * If the group has already been built, build only the specified file.
+   * Returns the requested file immediately and builds the rest in the background.
    */
-  private async buildGroup(filename: string): Promise<void> {
-    // TODO: Use the config
+  private async buildGroup(filename: string): Promise<CompilationTarget> {
     const { root, fileNames, swcConfig } = await this.getModule(filename);
 
-    await this.reportErrors(async () => {
-      await Promise.all(fileNames.map((filename) => this.buildFile(filename, root, swcConfig)));
-    });
+    const requestedFile = this.buildFile(filename, root, swcConfig);
+
+    const otherFiles = fileNames.filter((name) => name !== filename);
+
+    void this.reportErrors(Promise.all(otherFiles.map((filename) => this.buildFile(filename, root, swcConfig))));
 
     log.debug("started build", {
       root,
       promptedBy: filename,
       files: fileNames.length,
     });
+
+    return requestedFile;
   }
 
-  private async reportErrors<T>(run: () => Promise<T>) {
+  private async reportErrors<T>(run: Promise<T>) {
     try {
-      return await run();
+      return await run;
     } catch (error) {
       log.error(error);
-    }
-  }
-
-  private async missingDestination(filename: string) {
-    const ignorePattern = await this.isFilenameIgnored(filename);
-
-    // TODO: Understand cases in which the file destination could be missing
-    if (ignorePattern) {
-      return `File ${filename} is imported but not being built because it is explicitly ignored in the esbuild-dev project config. It is being ignored by the provided glob pattern '${ignorePattern}', remove this pattern from the project config or don't import this file to fix.`;
-    } else {
-      return `Built output for file ${filename} not found. Is it outside the project directory, or has it failed to build?`;
     }
   }
 
@@ -242,19 +242,5 @@ export class SwcCompiler implements Compiler {
     }
 
     return false;
-  }
-
-  invalidate(filename: string): void {
-    this.invalidatedFiles.add(filename);
-    this.compiledFiles.removeFile(filename);
-  }
-
-  async rebuild(): Promise<void> {
-    await Promise.all(
-      Array.from(this.invalidatedFiles).map((filename) => {
-        return this.compile(filename);
-      })
-    );
-    return;
   }
 }

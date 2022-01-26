@@ -100,9 +100,9 @@ const startFilesystemWatcher = (project: Project) => {
 const startIPCServer = async (socketPath: string, project: Project) => {
   const compile = async (filename: string) => {
     try {
-      await project.compiler.compile(filename);
+      const pathsMap = await project.compiler.compile(filename);
       project.watcher?.add(filename);
-      return await project.compiler.fileGroup(filename);
+      return pathsMap;
     } catch (error) {
       log.error(`Error compiling file ${filename}:`, error);
     }

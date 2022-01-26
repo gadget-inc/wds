@@ -49,7 +49,6 @@ export class Project {
     if (invalidate) {
       await this.compiler.invalidateBuildSet();
     }
-    await this.compiler.rebuild();
     this.supervisor.restart();
   }
 
