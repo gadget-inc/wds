@@ -3,13 +3,14 @@ import { ChildProcessResult, MARKER } from "./protocol";
 
 const startTime = process.hrtime.bigint();
 
-process.on("exit", () => {
+process.on("exit", (code) => {
   const endTime = process.hrtime.bigint();
 
   const metrics: ChildProcessResult = {
     event: "exit",
     startTime,
     endTime,
+    code: code,
     duration: Number(endTime - startTime),
   };
 

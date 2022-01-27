@@ -1,4 +1,5 @@
 import { ChildProcessByStdio, spawn } from "child_process";
+import findRoot from "find-root";
 import * as fs from "fs/promises";
 import path from "path";
 import { Readable } from "stream";
@@ -10,11 +11,11 @@ type ChildProcess = ChildProcessByStdio<null, Readable, null>;
 
 function monitorLogs(childProcess: ChildProcess): Promise<ChildProcessResult> {
   const childStdOut = childProcess.stdout;
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const onEnd = () => {
       childStdOut.removeListener("data", onData);
       childStdOut.removeListener("end", onEnd);
-      return reject("Failed to find metric output line in child process. Did it terminate correctly?");
+      throw "Failed to find metric output line in child process. Did it terminate correctly?";
     };
     const onData = (data: Buffer) => {
       const str = data.toString("utf-8");
@@ -23,7 +24,11 @@ function monitorLogs(childProcess: ChildProcess): Promise<ChildProcessResult> {
         const metrics = json.parse(line.replace(MARKER, ""));
         childStdOut.removeListener("data", onData);
         childStdOut.removeListener("end", onEnd);
-        return resolve(metrics);
+        if (metrics.code === 0) {
+          return resolve(metrics);
+        } else {
+          throw `Child process completed unsuccessfully, aborting benchmark. Exit code: ${metrics.code}`;
+        }
       }
     };
     childStdOut.on("data", onData);
@@ -44,12 +49,15 @@ function spawnOnce(args: { supervise?: boolean; filename: string; swc: boolean }
   }
 
   const binPath = path.resolve("pkg/esbuild-dev.bin.js");
-  const allArgs = [...extraArgs, "-r", path.resolve("pkg/bench/bench-child-hooks.js"), args.filename];
+  const root = findRoot(args.filename);
+  const relativeFilePath = path.relative(root, args.filename);
+  const allArgs = [...extraArgs, "-r", path.resolve("pkg/bench/bench-child-hooks.js"), relativeFilePath];
 
   log.debug(binPath, ...allArgs);
 
   return spawn(binPath, allArgs, {
     stdio: ["ignore", "pipe", "ignore"],
+    cwd: root,
   });
 }
 
