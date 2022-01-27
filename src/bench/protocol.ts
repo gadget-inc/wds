@@ -4,4 +4,5 @@ export type ChildProcessResult = {
   duration: number;
   startTime: bigint;
   endTime: bigint;
+  code: number;
 };
