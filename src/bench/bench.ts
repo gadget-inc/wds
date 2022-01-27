@@ -87,8 +87,9 @@ const quantile = (values: Array<number>, q: number) => {
   }
 };
 
+const asMs = (number: number): number => Math.round((number * 100) / 1e6) / 100;
+
 function report(results: Array<RunResult>): Record<string, Record<string, number>> {
-  const asMs = (number: number): number => Math.round((number * 100) / 1e6) / 100;
   const totalDurations = results.map((result) => result.duration);
   const childDurations = results.map((result) => result.metrics.duration);
 
@@ -144,7 +145,28 @@ export async function benchBoot(args: BenchArgs): Promise<void> {
 
   process.stdout.write("\n");
 
+  await saveResults("boot", results);
+
   console.table(report(results));
+}
+
+async function saveResults(type: string, results: Array<RunResult>) {
+  try {
+    await fs.mkdir("./bench-results");
+  } catch (e) {}
+
+  const filename = `./bench-results/bench-${type}-${Date.now()}.csv`;
+  process.stdout.write(`Saving results: ${filename}\n`);
+
+  const file = await fs.open(filename, "w");
+
+  await file.write("run,child time,total time\n");
+
+  for (const [index, result] of results.entries()) {
+    await file.write(`${index},${asMs(result.metrics.duration)},${asMs(result.duration)}\n`);
+  }
+
+  await file.close();
 }
 
 export async function benchReload(args: BenchArgs): Promise<void> {
@@ -178,6 +200,7 @@ export async function benchReload(args: BenchArgs): Promise<void> {
   childProcess.kill();
 
   process.stdout.write("\n");
+  await saveResults("reload", results);
 
   console.table(report(results));
 }

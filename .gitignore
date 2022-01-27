@@ -4,3 +4,4 @@ pkg
 test/supervise/run-scratch.ts
 test/reload/run-scratch.ts
 .direnv
+bench-results
