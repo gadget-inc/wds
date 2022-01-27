@@ -15,7 +15,7 @@ function monitorLogs(childProcess: ChildProcess): Promise<ChildProcessResult> {
     const onEnd = () => {
       childStdOut.removeListener("data", onData);
       childStdOut.removeListener("end", onEnd);
-      throw "Failed to find metric output line in child process. Did it terminate correctly?";
+      throw new Error("Failed to find metric output line in child process. Did it terminate correctly?");
     };
     const onData = (data: Buffer) => {
       const str = data.toString("utf-8");
@@ -27,7 +27,7 @@ function monitorLogs(childProcess: ChildProcess): Promise<ChildProcessResult> {
         if (metrics.code === 0) {
           return resolve(metrics);
         } else {
-          throw `Child process completed unsuccessfully, aborting benchmark. Exit code: ${metrics.code}`;
+          throw new Error(`Child process completed unsuccessfully, aborting benchmark. Exit code: ${metrics.code}`);
         }
       }
     };
