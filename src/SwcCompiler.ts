@@ -29,10 +29,10 @@ const SWC_DEFAULTS: Config = {
   },
 };
 
-export type CompilationTarget = { filename: string; root: string; destination: Promise<string>; config: Config };
+export type CompilationTarget = { filename: string; root: string; destination: Promise<string|CompilationError>; config: Config };
 export type Group = { root: string; files: Array<CompilationTarget> };
 export class CompilationError extends Error {
-  constructor(readonly originalError: Error) {
+  constructor(readonly filename: string, readonly originalError: Error) {
     super(originalError.message);
   }
 }
@@ -43,14 +43,6 @@ class CompiledFiles {
 
   constructor() {
     this.groups = new Map();
-  }
-
-  removeFile(filename: string) {
-    for (const [root, files] of this.groups.entries()) {
-      if (files.get(filename)) {
-        files.delete(filename);
-      }
-    }
   }
 
   addFile(file: CompilationTarget) {
@@ -91,11 +83,11 @@ export class SwcCompiler implements Compiler {
     const group = this.compiledFiles.group(filename);
 
     if (group) {
-      return await this.mapPaths(group.files);
+      return await this.mapPaths(filename, group.files);
     }
 
     const file = await this.buildGroup(filename);
-    return await this.mapPaths([file]);
+    return await this.mapPaths(filename,[file]);
   }
 
   invalidate(filename: string): void {
@@ -110,10 +102,23 @@ export class SwcCompiler implements Compiler {
     this.compiledFiles = new CompiledFiles();
   }
 
-  private async mapPaths(compilationTargets: Array<CompilationTarget>): Promise<PathsMap> {
+  private async mapPaths(requestedFile: string, compilationTargets: Array<CompilationTarget>): Promise<PathsMap> {
     const results: PathsMap = {};
     for (const target of compilationTargets) {
-      results[target.filename] = await target.destination;
+      try {
+        const result = await target.destination;
+        if (result instanceof CompilationError) {
+          if (target.filename === requestedFile) {
+            throw result;
+          } else {
+            log.error(result);
+            continue;
+          }
+        }
+        results[target.filename] = result;
+      } catch (e) {
+        log.error(e);
+      }
     }
     return results;
   }
@@ -138,7 +143,9 @@ export class SwcCompiler implements Compiler {
         return destination;
       })
       .catch((e) => {
-        throw new CompilationError(e);
+        const error = new CompilationError(filename, e);
+        target.destination = Promise.resolve(error);
+        return error
       });
 
     const target = { filename, root, destination: outputPromise, config };
@@ -186,7 +193,7 @@ export class SwcCompiler implements Compiler {
 
     const otherFiles = fileNames.filter((name) => name !== filename);
 
-    void this.reportErrors(Promise.all(otherFiles.map((filename) => this.buildFile(filename, root, swcConfig))));
+    void this.reportErrors(async () => await Promise.all(otherFiles.map((filename) => this.buildFile(filename, root, swcConfig))));
 
     log.debug("started build", {
       root,
@@ -197,9 +204,9 @@ export class SwcCompiler implements Compiler {
     return requestedFile;
   }
 
-  private async reportErrors<T>(run: Promise<T>) {
+  private async reportErrors<T>(run: () => Promise<T>) {
     try {
-      return await run;
+      return await run();
     } catch (error) {
       log.error(error);
     }
