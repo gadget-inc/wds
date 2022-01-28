@@ -29,7 +29,7 @@ const SWC_DEFAULTS: Config = {
   },
 };
 
-export type CompilationTarget = { filename: string; root: string; destination: Promise<string|CompilationError>; config: Config };
+export type CompilationTarget = { filename: string; root: string; destination: Promise<string | CompilationError>; config: Config };
 export type Group = { root: string; files: Array<CompilationTarget> };
 export class CompilationError extends Error {
   constructor(readonly filename: string, readonly originalError: Error) {
@@ -79,6 +79,10 @@ export class SwcCompiler implements Compiler {
     this.compiledFiles = new CompiledFiles();
   }
 
+  async invalidateBuildSet() {
+    this.compiledFiles = new CompiledFiles();
+  }
+
   async compile(filename: string): Promise<PathsMap> {
     const group = this.compiledFiles.group(filename);
 
@@ -87,7 +91,7 @@ export class SwcCompiler implements Compiler {
     }
 
     const file = await this.buildGroup(filename);
-    return await this.mapPaths(filename,[file]);
+    return await this.mapPaths(filename, [file]);
   }
 
   invalidate(filename: string): void {
@@ -98,61 +102,21 @@ export class SwcCompiler implements Compiler {
     }
   }
 
-  async invalidateBuildSet() {
-    this.compiledFiles = new CompiledFiles();
-  }
-
   private async mapPaths(requestedFile: string, compilationTargets: Array<CompilationTarget>): Promise<PathsMap> {
     const results: PathsMap = {};
     for (const target of compilationTargets) {
-      try {
-        const result = await target.destination;
-        if (result instanceof CompilationError) {
-          if (target.filename === requestedFile) {
-            throw result;
-          } else {
-            log.error(result);
-            continue;
-          }
+      const result = await target.destination;
+      if (result instanceof CompilationError) {
+        if (target.filename === requestedFile) {
+          throw result;
+        } else {
+          log.error(result);
+          continue;
         }
-        results[target.filename] = result;
-      } catch (e) {
-        log.error(e);
       }
+      results[target.filename] = result;
     }
     return results;
-  }
-
-  private async buildFile(filename: string, root: string, config: Options): Promise<CompilationTarget> {
-    const destination = path.join(this.outDir, filename).replace(this.workspaceRoot, "");
-
-    const outputPromise = transformFile(filename, {
-      cwd: root,
-      filename: filename,
-      root: this.workspaceRoot,
-      rootMode: "root",
-      sourceMaps: "inline",
-      swcrc: false,
-      inlineSourcesContent: true,
-      ...config,
-    })
-      .then(async (output) => {
-        await fs.mkdir(path.dirname(destination), { recursive: true });
-        await fs.writeFile(destination, output.code);
-        target.destination = Promise.resolve(destination);
-        return destination;
-      })
-      .catch((e) => {
-        const error = new CompilationError(filename, e);
-        target.destination = Promise.resolve(error);
-        return error
-      });
-
-    const target = { filename, root, destination: outputPromise, config };
-
-    this.compiledFiles.addFile(target);
-
-    return target;
   }
 
   private async getModule(filename: string) {
@@ -180,6 +144,38 @@ export class SwcCompiler implements Compiler {
     }
 
     return { root, fileNames, swcConfig };
+  }
+
+  private async buildFile(filename: string, root: string, config: Options): Promise<CompilationTarget> {
+    const destination = path.join(this.outDir, filename).replace(this.workspaceRoot, "");
+
+    const outputPromise = transformFile(filename, {
+      cwd: root,
+      filename: filename,
+      root: this.workspaceRoot,
+      rootMode: "root",
+      sourceMaps: "inline",
+      swcrc: false,
+      inlineSourcesContent: true,
+      ...config,
+    })
+      .then(async (output) => {
+        await fs.mkdir(path.dirname(destination), { recursive: true });
+        await fs.writeFile(destination, output.code);
+        target.destination = Promise.resolve(destination);
+        return destination;
+      })
+      .catch((e) => {
+        const error = new CompilationError(filename, e);
+        target.destination = Promise.resolve(error);
+        return error;
+      });
+
+    const target = { filename, root, destination: outputPromise, config };
+
+    this.compiledFiles.addFile(target);
+
+    return target;
   }
 
   /**
