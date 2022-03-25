@@ -161,7 +161,7 @@ And then, you can use `swc`'s standard syntax for the `.swcrc` file
 }
 ```
 
-Refer to [the SWC docs](https://swc.rs/docs/configuration/swcrc) for more ifno.
+Refer to [the SWC docs](https://swc.rs/docs/configuration/swcrc) for more info.
 
 ## Comparison to `ts-node-dev`
 
