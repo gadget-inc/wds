@@ -3,9 +3,9 @@ import { defaults } from "lodash";
 import path from "path";
 import { ProjectConfig } from "./Options";
 
-const logPrefix = `[esbuild-dev pid=${process.pid}]`;
+const logPrefix = `[wds pid=${process.pid}]`;
 export const log = {
-  debug: (...args: any[]) => process.env["ESBUILD_DEV_DEBUG"] && console.warn(logPrefix, ...args),
+  debug: (...args: any[]) => process.env["WDS_DEBUG"] && console.warn(logPrefix, ...args),
   info: (...args: any[]) => console.warn(logPrefix, ...args),
   warn: (...args: any[]) => console.warn(logPrefix, ...args),
   error: (...args: any[]) => console.error(logPrefix, ...args),
@@ -20,7 +20,7 @@ export const time = async <T extends any>(run: () => Promise<T>) => {
 };
 
 export const projectConfig = async (root: string): Promise<ProjectConfig> => {
-  const location = path.join(root, "esbuild-dev.js");
+  const location = path.join(root, "wds.js");
   const value = { ignore: [], extensions: [".ts", ".tsx", ".jsx"] };
   try {
     await fs.access(location);

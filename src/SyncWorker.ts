@@ -54,13 +54,13 @@ export class SyncWorker {
     log.debug("booted syncworker worker", { filename: __filename, scriptPath, threadId: this.worker.threadId });
 
     this.worker.on("error", (error) => {
-      log.error("[esbuild-dev] Internal error", error);
+      log.error("[wds] Internal error", error);
       process.exit(1);
     });
 
     this.worker.on("exit", (code) => {
       if (code !== 0) {
-        log.error("[esbuild-dev] Internal error, compiler worked exited unexpectedly");
+        log.error("[wds] Internal error, compiler worked exited unexpectedly");
         process.exit(1);
       }
     });
@@ -87,20 +87,17 @@ export class SyncWorker {
     // synchronously wait for worker thread to get back to us
     const status = Atomics.wait(sharedBufferView, 0, 0, 60000);
     if (status === "timed-out")
-      throw new Error(
-        "[esbuild-dev] Internal error: timed out communicating with esbuild-dev sync worker thread, likely an esbuild-dev bug"
-      );
-    if (status !== "ok" && status !== "not-equal")
-      throw new Error(`[esbuild-dev] Internal error: Atomics.wait() failed with status ${status}`);
+      throw new Error("[wds] Internal error: timed out communicating with wds sync worker thread, likely an wds bug");
+    if (status !== "ok" && status !== "not-equal") throw new Error(`[wds] Internal error: Atomics.wait() failed with status ${status}`);
 
     const message = receiveMessageOnPort(this.port);
 
-    if (!message) throw new Error("[esbuild-dev] Internal error: no response received from sync worker thread");
+    if (!message) throw new Error("[wds] Internal error: no response received from sync worker thread");
     const response: SyncWorkerResponse = message.message;
 
     if (response.id != id)
       throw new Error(
-        `[esbuild-dev] Internal error: response received from sync worker thread with incorrect id, sent ${id}, recieved ${response.id}`
+        `[wds] Internal error: response received from sync worker thread with incorrect id, sent ${id}, recieved ${response.id}`
       );
 
     if (response.error) throw response.error;
@@ -117,7 +114,7 @@ if (!workerThreads.isMainThread) {
     if (!workerData) return setImmediate(runWorker as any); // eslint-disable-line @typescript-eslint/no-implied-eval
     if (!workerData.isESBuildDevWorker) return;
 
-    const file = process.env["ESBUILD_DEV_DEBUG"] ? await fs.open("/tmp/esbuild-dev-debug-log.txt", "w") : undefined;
+    const file = process.env["WDS_DEBUG"] ? await fs.open("/tmp/wds-debug-log.txt", "w") : undefined;
     const implementation = require(workerData.scriptPath); // eslint-disable-line @typescript-eslint/no-var-requires
     const port: MessagePort = workerData.port;
 

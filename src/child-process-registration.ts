@@ -13,7 +13,7 @@ let pendingRequireNotifications: string[] = [];
 const throttledRequireFlush = throttle(() => {
   try {
     const request = http.request(
-      { socketPath: process.env["ESBUILD_DEV_SOCKET_PATH"]!, path: "/file-required", method: "POST", timeout: 200 },
+      { socketPath: process.env["WDS_SOCKET_PATH"]!, path: "/file-required", method: "POST", timeout: 200 },
       () => {
         // don't care if it worked
       },
@@ -51,7 +51,7 @@ if (!workerData || !(workerData as SyncWorkerData).isESBuildDevWorker) {
 
     if (!result) {
       throw new Error(
-        `[esbuild-dev] Internal error: compiled ${filename} but did not get it returned from the leader process in the list of compiled files`
+        `[wds] Internal error: compiled ${filename} but did not get it returned from the leader process in the list of compiled files`
       );
     }
 
@@ -59,8 +59,8 @@ if (!workerData || !(workerData as SyncWorkerData).isESBuildDevWorker) {
   };
 
   // Register our compiler for typescript files.
-  // We don't do the best practice of chaining module._compile calls because esbuild won't know about any of the stuff any of the other extensions might do, so running them wouldn't do anything. esbuild-dev must then be the first registered extension.
-  for (const extension of process.env["ESBUILD_DEV_EXTENSIONS"]!.split(",")) {
+  // We don't do the best practice of chaining module._compile calls because esbuild won't know about any of the stuff any of the other extensions might do, so running them wouldn't do anything. wds must then be the first registered extension.
+  for (const extension of process.env["WDS_EXTENSIONS"]!.split(",")) {
     require.extensions[extension] = (module: any, filename: string) => {
       const compiledFilename = compile(filename);
       const content = fs.readFileSync(compiledFilename, "utf8");

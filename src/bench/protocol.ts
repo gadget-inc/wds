@@ -1,4 +1,4 @@
-export const MARKER = "[esbuild-dev-bench]:";
+export const MARKER = "[wds-bench]:";
 export type ChildProcessResult = {
   event: string;
   duration: number;

@@ -48,7 +48,7 @@ function spawnOnce(args: { supervise?: boolean; filename: string; swc: boolean }
     extraArgs.push("--swc");
   }
 
-  const binPath = path.resolve("pkg/esbuild-dev.bin.js");
+  const binPath = path.resolve("pkg/wds.bin.js");
   const root = findRoot(args.filename);
   const relativeFilePath = path.relative(root, args.filename);
   const allArgs = [...extraArgs, "-r", path.resolve("pkg/bench/bench-child-hooks.js"), relativeFilePath];

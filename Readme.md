@@ -1,4 +1,4 @@
-# esbuild-dev
+# wds
 
 A reloading dev server for server side TypeScript projects. Compiles TypeScript _real_ fast, on demand, using `require.extensions`, and restarts the server when things change. Similar to, and inspired by `ts-node-dev`.
 
@@ -40,4 +40,4 @@ Options:
 
 ## Comparison to `ts-node-dev`
 
-`ts-node-dev` (and `ts-node`) accomplish a similar feat but are often 5-10x slower than `esbuild-dev` in big projects. They are loaded with features and will keep up with new TypeScript features much better as they use the mainline TypeScript compiler sources, and we think they make lots of sense! Because they use TypeScript proper for compilation though, even with `--transpile-only`, they are destined to be slower than `esbuild`. `esbuild-dev`is for the times where you care a lot more about performance and are ok with the tradeoffs `esbuild` makes, like not supporting`const enum` and being a touch behind on supporting new TypeScript releases.
+`ts-node-dev` (and `ts-node`) accomplish a similar feat but are often 5-10x slower than `wds` in big projects. They are loaded with features and will keep up with new TypeScript features much better as they use the mainline TypeScript compiler sources, and we think they make lots of sense! Because they use TypeScript proper for compilation though, even with `--transpile-only`, they are destined to be slower than `esbuild`. `wds`is for the times where you care a lot more about performance and are ok with the tradeoffs `esbuild` makes, like not supporting`const enum` and being a touch behind on supporting new TypeScript releases.

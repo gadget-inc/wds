@@ -6,7 +6,7 @@ import { log } from "./utils";
 const compileInLeaderProcess = async (filename: string): Promise<Record<string, string>> => {
   return await new Promise((resolve, reject) => {
     const request = http.request(
-      { socketPath: process.env["ESBUILD_DEV_SOCKET_PATH"]!, path: "/compile", method: "POST", timeout: 200 },
+      { socketPath: process.env["WDS_SOCKET_PATH"]!, path: "/compile", method: "POST", timeout: 200 },
       (resp) => {
         let data = "";
         if (resp.statusCode !== 200) {

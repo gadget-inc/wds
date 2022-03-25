@@ -38,8 +38,8 @@ export class Supervisor extends EventEmitter {
       cwd: process.cwd(),
       env: {
         ...process.env,
-        ESBUILD_DEV_SOCKET_PATH: this.socketPath,
-        ESBUILD_DEV_EXTENSIONS: this.project.config.extensions.join(","),
+        WDS_SOCKET_PATH: this.socketPath,
+        WDS_EXTENSIONS: this.project.config.extensions.join(","),
       },
       stdio: [null, "inherit", "inherit", "ipc"],
     });
