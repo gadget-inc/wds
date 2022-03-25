@@ -4,7 +4,7 @@ import os from "os";
 import path from "path";
 
 const compile = async (filename: string, root = "fixtures/src") => {
-  const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "esbuild-dev-test"));
+  const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "wds-test"));
   const rootDir = path.join(__dirname, root);
   const fullPath = path.join(rootDir, filename);
 
@@ -37,7 +37,7 @@ function _childProcess() {
 `.trim());
 });
 
-test("uses the swc config file from esbuild-dev.js", async () => {
+test("uses the swc config file from wds.js", async () => {
   const contentWithConfigOverride = await compile("./files_with_config/simple.ts");
   expect(contentWithConfigOverride).not.toContain("strict");
 
@@ -45,7 +45,7 @@ test("uses the swc config file from esbuild-dev.js", async () => {
   expect(contentWithoutConfigOverride).toContain("strict");
 });
 
-test("uses the .swcrc file if esbuild-dev.js uses 'swc': '.swcrc'", async () => {
+test("uses the .swcrc file if wds.js uses 'swc': '.swcrc'", async () => {
   const contentWithRootSwcrc = await compile("./files_with_swcrc/simple.ts");
   expect(contentWithRootSwcrc).not.toContain("strict");
 

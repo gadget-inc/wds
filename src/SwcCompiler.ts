@@ -199,7 +199,7 @@ export class SwcCompiler implements Compiler {
 
     // TODO: Understand cases in which the file destination could be missing
     if (ignorePattern) {
-      return `File ${filename} is imported but not being built because it is explicitly ignored in the esbuild-dev project config. It is being ignored by the provided glob pattern '${ignorePattern}', remove this pattern from the project config or don't import this file to fix.`;
+      return `File ${filename} is imported but not being built because it is explicitly ignored in the wds project config. It is being ignored by the provided glob pattern '${ignorePattern}', remove this pattern from the project config or don't import this file to fix.`;
     } else {
       return `Built output for file ${filename} not found. Is it outside the project directory, or has it failed to build?`;
     }

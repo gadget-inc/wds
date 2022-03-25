@@ -1,14 +1,14 @@
 {
-  "name": "esbuild-dev",
+  "name": "wds",
   "version": "0.10.0",
   "author": "Harry Brundage",
   "license": "MIT",
   "bin": {
-    "esbuild-dev": "pkg/esbuild-dev.bin.js"
+    "wds": "pkg/wds.bin.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/gadget-inc/esbuild-dev.git"
+    "url": "https://github.com/gadget-inc/wds.git"
   },
   "publishConfig": {
     "access": "public"
@@ -22,7 +22,7 @@
     "LICENSE.txt"
   ],
   "scripts": {
-    "build": "rm -rf pkg && tsc && chmod +x pkg/esbuild-dev.bin.js pkg/esbuild-dev-bench.bin.js",
+    "build": "rm -rf pkg && tsc && chmod +x pkg/wds.bin.js pkg/wds-bench.bin.js",
     "prepublishOnly": "yarn run build",
     "watch": "tsc -w",
     "typecheck": "tsc --noEmit",

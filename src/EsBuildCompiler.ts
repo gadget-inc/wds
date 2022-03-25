@@ -158,7 +158,7 @@ export class EsBuildCompiler implements Compiler {
 
       if (ignorePattern) {
         throw new Error(
-          `File ${filename} is imported but not being built because it is explicitly ignored in the esbuild-dev project config. It is being ignored by the provided glob pattern '${ignorePattern}', remove this pattern from the project config or don't import this file to fix.`
+          `File ${filename} is imported but not being built because it is explicitly ignored in the wds project config. It is being ignored by the provided glob pattern '${ignorePattern}', remove this pattern from the project config or don't import this file to fix.`
         );
       } else {
         throw new Error(

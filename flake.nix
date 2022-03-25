@@ -1,5 +1,5 @@
 {
-  description = "esbuild-dev development environment";
+  description = "wds development environment";
 
   inputs = {
     flake-utils.url = "github:numtide/flake-utils";
