@@ -88,6 +88,7 @@ export class SwcCompiler implements Compiler {
   }
 
   async invalidateBuildSet() {
+    this.invalidatedFiles = new Set();
     this.compiledFiles = new CompiledFiles();
   }
 
@@ -163,6 +164,7 @@ export class SwcCompiler implements Compiler {
     const file = { filename, root, destination, config };
 
     this.compiledFiles.addFile(file);
+    this.invalidatedFiles.delete(filename);
 
     return file;
   }
