@@ -23,9 +23,8 @@ jobs:
           token: ${{ secrets.NPM_TOKEN }}
           access: public
       - name: Publish Release to github
-        uses: "marvinpinto/action-automatic-releases@latest"
+        uses: softprops/action-gh-release@v1
         if: ${{ steps.npm-publish.outputs.type != 'none' }}
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: false
-          automatic_release_tag: ${{ steps.npm-publish.outputs.version }}
+          tag_name: ${{ steps.npm-publish.outputs.version }}
+          generate_release_notes: true
