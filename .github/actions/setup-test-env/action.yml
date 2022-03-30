@@ -1,0 +1,21 @@
+name: 'Setup test environment'
+description: ''
+inputs: {}
+outputs: {}
+runs:
+    using: "composite"
+    steps:
+    - uses: cachix/install-nix-action@v14
+      with:
+        install_url: https://nixos-nix-install-tests.cachix.org/serve/vij683ly7sl95nnhb67bdjjfabclr85m/install
+        install_options: '--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve'
+        extra_nix_config: |
+          experimental-features = nix-command flakes
+    - run: nix flake check
+      shell: bash
+    - name: Add Gadget yarn registry
+      shell: nix develop -c bash -eo pipefail -l {0}
+      run: npm config set @gadget-client:registry https://registry.gadget.dev/npm
+    - name: Install dependencies with yarn install
+      shell: nix develop -c bash -eo pipefail -l {0}
+      run: yarn install

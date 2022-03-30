@@ -14,11 +14,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v2
       - uses: ./.github/actions/setup-test-env
-      - name: Build all packages
-        shell: nix develop -c bash -eo pipefail -l {0}
-        run: yarn build
       - id: npm-publish
         name: Publish wds to npm
         uses: JS-DevTools/npm-publish@v1
