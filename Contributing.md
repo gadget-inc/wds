@@ -6,12 +6,7 @@ Then gotta use it somewhere, which tends to be easiest in a project. I use `yarn
 
 # Releasing
 
-## Build the package
+Releases are managed automatically by Github Actions. To create a new release, follow these setps:
 
-Run `yarn build`
-
-## Release the package
-
-Decide what type of new version you're gonna publish and bump the version with `npm version minor|major|patch`
-
-Run `yarn build && npm publish`
+1. Run `npm version minor|major|patch`. This will change the version in the package.json and create a new git commit changing it. 
+2. Push this commit to the `main` branch. CI will run the tests, then run the release workflow, which publishes to NPM, create a Github release, and creates a git tag for the version.
