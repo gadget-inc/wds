@@ -18,7 +18,7 @@ interface SyncWorkerResponse {
 }
 
 export interface SyncWorkerData {
-  isESBuildDevWorker: true;
+  isWDSSyncWorker: true;
   scriptPath: string;
   port: MessagePort;
 }
@@ -41,7 +41,7 @@ export class SyncWorker {
     const workerData: SyncWorkerData = {
       scriptPath,
       port: port2,
-      isESBuildDevWorker: true,
+      isWDSSyncWorker: true,
     };
 
     this.worker = new Worker(__filename, {
@@ -109,10 +109,8 @@ export class SyncWorker {
 // This file re-executes itself in the worker thread. Actually run the worker code within the inner thread if we're the inner thread
 if (!workerThreads.isMainThread) {
   const runWorker = async () => {
-    // try to be immune to https://github.com/nodejs/node/issues/36531
     const workerData: SyncWorkerData | undefined = workerThreads.workerData;
-    if (!workerData) return setImmediate(runWorker as any); // eslint-disable-line @typescript-eslint/no-implied-eval
-    if (!workerData.isESBuildDevWorker) return;
+    if (!workerData || !workerData.isWDSSyncWorker) return;
 
     const file = process.env["WDS_DEBUG"] ? await fs.open("/tmp/wds-debug-log.txt", "w") : undefined;
     const implementation = require(workerData.scriptPath); // eslint-disable-line @typescript-eslint/no-var-requires
