@@ -34,7 +34,7 @@ const notifyParentProcessOfRequire = (filename: string) => {
   void throttledRequireFlush();
 };
 
-if (!workerData || !(workerData as SyncWorkerData).isESBuildDevWorker) {
+if (!workerData || !(workerData as SyncWorkerData).isWDSSyncWorker) {
   const worker = new SyncWorker(path.join(__dirname, "child-process-ipc-worker.js"));
   const paths: Record<string, string> = {};
 

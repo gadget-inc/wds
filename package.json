@@ -33,6 +33,9 @@
     "prerelease": "gitpkg publish",
     "test": "jest"
   },
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "dependencies": {
     "@cspotcode/source-map-support": "^0.7.0",
     "@swc/core": "^1.2.152",
