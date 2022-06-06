@@ -1,4 +1,4 @@
-import {MissingDestinationError, SwcCompiler} from '../src/SwcCompiler'
+import { MissingDestinationError, SwcCompiler } from '../src/SwcCompiler'
 import * as fs from "fs/promises";
 import os from "os";
 import path from "path";

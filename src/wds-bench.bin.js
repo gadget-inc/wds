@@ -10,9 +10,9 @@ export const cli = async () => {
       type: "number",
       default: 10,
     })
-    .option("swc", {
+    .option("esbuild", {
       type: "boolean",
-      description: "Use the SWC compiler",
+      description: "Use the esbuild compiler",
     })
     .option("type", {
       choices: ["boot", "reload"],
@@ -26,7 +26,7 @@ export const cli = async () => {
   const benchArgs = {
     runs: args.runs,
     argv: args._,
-    swc: args.swc,
+    esbuild: args.esbuild,
   };
 
   switch (args.type) {

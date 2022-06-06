@@ -3,7 +3,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 echo $DIR
 set -e
 
-ALL_ARGS=("--no-swc" "--swc")
+ALL_ARGS=("--no-esbuild" "--esbuild")
 
 for args in "${ALL_ARGS[@]}"; do
   echo "::group::Simple test ${args}"
