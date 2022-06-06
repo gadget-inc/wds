@@ -3,6 +3,22 @@
 A reloading dev server for server side TypeScript projects. Compiles TypeScript _real_ fast, on demand, using `require.extensions`, and restarts the server when things change. Similar to and inspired by `ts-node-dev`.
 
 wds stands for Whirlwind (or web) Development Server.
+
+## Examples
+
+After installing `wds`, you can use it like you might use the `node` command line program:
+
+```shell
+# run one script with wds compiling TS to JS as it is required
+wds some-script.ts
+
+# run one server with wds watching the files for changes, and re-running the server when they change
+wds --watch some-server.ts
+
+# run one script with node command line arguments that you'd normally pass to `node`
+wds --inspect some-test.test.ts
+```
+
 ## Features
 
 - Builds and runs TypeScript really fast (using [`swc`](https://github.com/swc-project/swc) or [`esbuild`](https://github.com/evanw/esbuild))
@@ -10,12 +26,13 @@ wds stands for Whirlwind (or web) Development Server.
 - Supervises the node.js process with `--supervise` to keep incremental context around on process crash, and can restart on demand in the `--commands` mode
 - Plays nice with node.js command line flags like `--inspect` or `--prof`
 - Produces sourcemaps which Just Work™️ by default for debugging with many editors (VSCode, IntelliJ, etc)
+- Monorepo aware, allowing for different configuration per package and only compiling what is actually required from the monorepo context
 
 ## Motivation
 
-You deserve to get stuff done. You deserve a fast iteration loop. If you're writing TypeScript for node, you still deserve to have a fast iteration loop, but with big codebases, `tsc` can get quite slow. Instead, you can use a fast TS => JS transpiler like `esbuild` or `swc` to quickly reload your runtime code, and use typechecking in the background to see if your code is correct later.
+You deserve to get stuff done. You deserve a fast iteration loop. If you're writing TypeScript for node, you still deserve to have a fast iteration loop, but with big codebases, `tsc` can get quite slow. Instead, you can use a fast TS => JS transpiler like `esbuild` or `swc` to quickly reload your runtime code and get to the point where you know if your code is working as fast as possible. This means a small sacrifice: `tsc` no longer typechecks your code as you run it, and so you must supplement with typechecking in your editor or in CI.
 
-This tool prioritizes rebooting a node.js TypeScript project as fast as possible. This means it _doesn't_ typecheck. Type checking gets prohibitively slow at scale, so we recommend using a separate typechecker that still gives you the valuable feedback, but out of band so you don't have to wait for it to see if your change actually worked. We usually don't run anything other than VSCode's TypeScript integration locally, and then run a full `tsc --noEmit` in CI.
+This tool prioritizes rebooting a node.js TypeScript project as fast as possible. This means it _doesn't_ typecheck. Type checking gets prohibitively slow at scale, so we recommend using this separate typechecker approach that still gives you  valuable feedback out of band. That way, you don't have to wait for it to see if your change actually worked. We usually don't run anything other than VSCode's TypeScript integration locally, and then run a full `tsc --noEmit` in CI.
 
 ## Usage
 
@@ -30,7 +47,7 @@ Options:
                                                        [boolean] [default: true]
   -s, --supervise  Supervise and restart the process when it exits indefinitely
                                                       [boolean] [default: false]
-      --swc        Use SWC instead of esbuild         [boolean] [default: false]
+      --esbuild    Use esbuild for compiling files    [boolean] [default: false]
 ```
 
 ## Configuration
@@ -55,36 +72,11 @@ module.exports = {
 };
 ```
 
-### When using `esbuild` (the default)
-
-`esbuild` accepts a wide variety of options. `wds` sets up a default set of options:
-
-```javascript
-{
-    platform: "node",
-    format: "cjs",
-    target: ["node14"],
-    sourcemap: "inline",
-}
-```
 
 
-If you want to override these options, you can create a `wds.js` file in your project root and pass options to override these like so:
+### When using `swc` (the default)
 
-```javascript
-// wds.js
-module.exports = {
-  esbuild: {
-    target: ["node12"]
-    // ...
-  },
-};
-```
-Refer to the [esbuild docs](https://esbuild.github.io/api/#build-api) for more info on the available options.
-
-### When using `swc` 
-
-`wds` sets up a default `swc` config suitable for compiling to JS for running in Node:
+`swc` is the fastest TypeScript compiler we've found and is the default compiler `wds` uses. `wds` sets up a default `swc` config suitable for compiling to JS for running in Node:
 
 ```json
 {
@@ -162,6 +154,35 @@ And then, you can use `swc`'s standard syntax for the `.swcrc` file
 ```
 
 Refer to [the SWC docs](https://swc.rs/docs/configuration/swcrc) for more info.
+
+### When using `esbuild`
+
+`esbuild` is a very fast and generally more stable TypeScript compiler for node. To use `esbuild` for your project's builds, pass the `--esbuild` command line flag.
+
+`esbuild` accepts a wide variety of options governing what kind of JS is produced. `wds` sets up a default set of options:
+
+```javascript
+{
+    platform: "node",
+    format: "cjs",
+    target: ["node14"],
+    sourcemap: "inline",
+}
+```
+
+
+If you want to override these options, you can create a `wds.js` file in your project root and pass options to override these like so:
+
+```javascript
+// wds.js
+module.exports = {
+  esbuild: {
+    target: ["node12"]
+    // ...
+  },
+};
+```
+Refer to the [esbuild docs](https://esbuild.github.io/api/#build-api) for more info on the available options.
 
 ## Comparison to `ts-node-dev`
 

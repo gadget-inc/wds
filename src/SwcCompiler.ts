@@ -185,6 +185,7 @@ export class SwcCompiler implements Compiler {
       root,
       promptedBy: filename,
       files: fileNames.length,
+      compiler: "swc",
     });
   }
 

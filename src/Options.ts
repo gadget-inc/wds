@@ -8,7 +8,7 @@ export interface RunOptions {
   terminalCommands: boolean;
   reloadOnChanges: boolean;
   supervise: boolean;
-  useSwc: boolean;
+  useEsbuild: boolean;
 }
 
 export interface ProjectConfig {

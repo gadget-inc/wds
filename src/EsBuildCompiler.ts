@@ -124,6 +124,7 @@ export class EsBuildCompiler implements Compiler {
         root,
         promptedBy: filename,
         files: fileNames.length,
+        compiler: "esbuild",
       });
 
       this.builds.push(build);

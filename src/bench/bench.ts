@@ -36,7 +36,7 @@ function monitorLogs(childProcess: ChildProcess): Promise<ChildProcessResult> {
   });
 }
 
-function spawnOnce(args: { supervise?: boolean; filename: string; swc: boolean }): ChildProcess {
+function spawnOnce(args: { supervise?: boolean; filename: string; esbuild: boolean }): ChildProcess {
   const extraArgs = [];
 
   if (args.supervise) {
@@ -44,8 +44,8 @@ function spawnOnce(args: { supervise?: boolean; filename: string; swc: boolean }
     extraArgs.push("--watch");
   }
 
-  if (args.swc) {
-    extraArgs.push("--swc");
+  if (args.esbuild) {
+    extraArgs.push("--esbuild");
   }
 
   const binPath = path.resolve("pkg/wds.bin.js");
@@ -111,7 +111,7 @@ function report(results: Array<RunResult>): Record<string, Record<string, number
 }
 
 export type BenchArgs = {
-  swc: boolean;
+  esbuild: boolean;
   runs: number;
   argv: Array<string>;
 };
@@ -134,7 +134,7 @@ export async function benchBoot(args: BenchArgs): Promise<void> {
 
   for (let i = 0; i < args.runs; i++) {
     const startTime = process.hrtime.bigint();
-    const childProcess = spawnOnce({ filename: execPath(args), swc: args.swc });
+    const childProcess = spawnOnce({ filename: execPath(args), esbuild: args.esbuild });
     const result = await monitorLogs(childProcess);
     const endTime = process.hrtime.bigint();
     results.push({
@@ -158,7 +158,7 @@ export async function benchReload(args: BenchArgs): Promise<void> {
 
   process.stdout.write(`Starting reload benchmark (pid=${process.pid})\n`);
 
-  const childProcess = spawnOnce({ supervise: true, filename: filepath, swc: args.swc });
+  const childProcess = spawnOnce({ supervise: true, filename: filepath, esbuild: args.esbuild });
   const _ignoreInitialBoot = await monitorLogs(childProcess);
 
   for (let i = 0; i < args.runs; i++) {

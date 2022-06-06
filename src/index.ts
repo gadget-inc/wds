@@ -39,18 +39,18 @@ export const cli = async () => {
       description: "Supervise and restart the process when it exits indefinitely",
       default: false,
     })
-    .option("swc", {
+    .option("esbuild", {
       type: "boolean",
-      description: "Use SWC instead of esbuild",
+      description: "Use esbuild instead of sec",
       default: false,
     }).argv;
 
-  return await esbuildDev({
+  return await wds({
     argv: args._ as any,
     terminalCommands: args.commands,
     reloadOnChanges: args.watch,
     supervise: args.supervise,
-    useSwc: args.swc,
+    useEsbuild: args.esbuild,
   });
 };
 
@@ -135,7 +135,7 @@ const childProcessArgs = () => {
   return ["-r", path.join(__dirname, "child-process-registration.js"), "-r", require.resolve("@cspotcode/source-map-support/register")];
 };
 
-export const esbuildDev = async (options: RunOptions) => {
+export const wds = async (options: RunOptions) => {
   const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "wds"));
   log.debug(`starting wds for workspace root ${workspaceRoot} and workdir ${workDir}`);
@@ -147,7 +147,8 @@ export const esbuildDev = async (options: RunOptions) => {
     serverSocketPath = path.join(workDir, "ipc.sock");
   }
 
-  const compiler = options.useSwc ? new SwcCompiler(workspaceRoot, workDir) : new EsBuildCompiler(workspaceRoot, workDir);
+  const compiler = options.useEsbuild ? new EsBuildCompiler(workspaceRoot, workDir) : new SwcCompiler(workspaceRoot, workDir);
+
   const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())), compiler);
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
 
