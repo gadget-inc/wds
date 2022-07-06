@@ -34,6 +34,14 @@ export class Supervisor extends EventEmitter {
       this.process.kill("SIGKILL");
     }
 
+    const onChildProcessMessage = (message: any) => {
+      if (process.send) process.send(message);
+    };
+    const onParentProcessMessage = (message: any) => {
+      this.process.send(message);
+    };
+    process.on("message", onParentProcessMessage);
+
     this.process = spawn("node", this.argv, {
       cwd: process.cwd(),
       env: {
@@ -44,11 +52,13 @@ export class Supervisor extends EventEmitter {
       stdio: [null, "inherit", "inherit", "ipc"],
     });
 
-    this.process.on("message", (value) => this.emit("message", value));
+    this.process.on("message", onChildProcessMessage);
     this.process.on("exit", (code, signal) => {
       if (signal !== "SIGKILL" && this.options.supervise) {
         log.warn(`process exited with ${code}`);
       }
+      this.process.off("message", onChildProcessMessage);
+      process.off("message", onParentProcessMessage);
     });
 
     return this.process;
