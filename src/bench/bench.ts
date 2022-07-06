@@ -36,11 +36,10 @@ function monitorLogs(childProcess: ChildProcess): Promise<ChildProcessResult> {
   });
 }
 
-function spawnOnce(args: { supervise?: boolean; filename: string; esbuild: boolean }): ChildProcess {
+function spawnOnce(args: { watch?: boolean; filename: string; esbuild: boolean }): ChildProcess {
   const extraArgs = [];
 
-  if (args.supervise) {
-    extraArgs.push("--supervise");
+  if (args.watch) {
     extraArgs.push("--watch");
   }
 
@@ -158,7 +157,7 @@ export async function benchReload(args: BenchArgs): Promise<void> {
 
   process.stdout.write(`Starting reload benchmark (pid=${process.pid})\n`);
 
-  const childProcess = spawnOnce({ supervise: true, filename: filepath, esbuild: args.esbuild });
+  const childProcess = spawnOnce({ watch: true, filename: filepath, esbuild: args.esbuild });
   const _ignoreInitialBoot = await monitorLogs(childProcess);
 
   for (let i = 0; i < args.runs; i++) {

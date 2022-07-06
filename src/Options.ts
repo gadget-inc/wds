@@ -7,7 +7,6 @@ export interface RunOptions {
   argv: string[];
   terminalCommands: boolean;
   reloadOnChanges: boolean;
-  supervise: boolean;
   useEsbuild: boolean;
 }
 

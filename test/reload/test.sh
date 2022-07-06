@@ -9,12 +9,12 @@ trap "kill -9 0" INT TERM
 trap 'kill $(jobs -p)' EXIT
 
 # run a server in the background
-$DIR/../../pkg/wds.bin.js $@ --supervise --commands $DIR/run-scratch.ts &
+$DIR/../../pkg/wds.bin.js $@ --commands $DIR/run-scratch.ts &
 
 max_retry=5
 counter=0
 
-set +e 
+set +e
 until curl -s localhost:8080 | grep "World"
 do
    sleep 1
