@@ -47,3 +47,24 @@ test("it proxies ipc messages", async () => {
 
   expect(messagesFromChild).toEqual([1, 2, 3]);
 })
+
+test("it doesn't setup ipc if it wasn't setup with ipc itself", async () => {
+  const binPath = path.join(__dirname, "../pkg/wds.bin.js");
+  const scriptPath = path.join(__dirname, "fixtures/src/no-ipc.ts");
+
+  const child = spawn(
+    "node",
+    [binPath, scriptPath],
+    {
+      stdio: ["inherit", "inherit", "inherit"],
+      env: process.env,
+    }
+  );
+
+  await new Promise<void>((resolve) => {
+    child.on("exit", (code) => {
+      resolve();
+      expect(code).toEqual(0);
+    });
+  });
+});
