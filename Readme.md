@@ -25,6 +25,7 @@ wds --inspect some-test.test.ts
 - Incrementally rebuilds only what has changed in the `--watch` mode, and restarts the process when files change
 - Supervises the node.js process with `--supervise` to keep incremental context around on process crash, and can restart on demand in the `--commands` mode
 - Plays nice with node.js command line flags like `--inspect` or `--prof`
+- Supports node.js `ipc` channels between the process starting `wds` and the node.js process started by `wds`.
 - Produces sourcemaps which Just Work™️ by default for debugging with many editors (VSCode, IntelliJ, etc)
 - Monorepo aware, allowing for different configuration per package and only compiling what is actually required from the monorepo context
 
