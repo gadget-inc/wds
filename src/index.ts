@@ -31,7 +31,7 @@ export const cli = async () => {
       alias: "w",
       type: "boolean",
       description: "Trigger restarts by watching for changes to required files",
-      default: true,
+      default: false,
     })
     .option("esbuild", {
       type: "boolean",
