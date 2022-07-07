@@ -1,6 +1,6 @@
 # wds
 
-A reloading dev server for server side TypeScript projects. Compiles TypeScript _real_ fast, on demand, using `require.extensions`, and restarts the server when things change. Similar to and inspired by `ts-node-dev`.
+A reloading dev server for server side TypeScript projects. Compiles TypeScript _real_ fast, on demand, using `require.extensions`. Similar to and inspired by `ts-node-dev`.
 
 wds stands for Whirlwind (or web) Development Server.
 
@@ -9,10 +9,10 @@ wds stands for Whirlwind (or web) Development Server.
 After installing `wds`, you can use it like you might use the `node` command line program:
 
 ```shell
-# run one script with wds compiling TS to JS as it is required
+# run one script with wds compiling TS to JS
 wds some-script.ts
 
-# run one server with wds watching the files for changes, and re-running the server when they change
+# run one server with wds `watch` mode, re-running the server on any file changes
 wds --watch some-server.ts
 
 # run one script with node command line arguments that you'd normally pass to `node`
@@ -22,7 +22,7 @@ wds --inspect some-test.test.ts
 ## Features
 
 - Builds and runs TypeScript really fast (using [`swc`](https://github.com/swc-project/swc) or [`esbuild`](https://github.com/evanw/esbuild))
-- Incrementally rebuilds only what has changed in the `--watch` mode, and restarts the process when files change
+- Incrementally rebuilds only what has changed in `--watch` mode, restarting the process on file changes
 - Execute commands on demand with the `--commands` mode
 - Plays nice with node.js command line flags like `--inspect` or `--prof`
 - Supports node.js `ipc` channels between the process starting `wds` and the node.js process started by `wds`.
@@ -45,7 +45,7 @@ Options:
                    stdin from being forwarded to the process. Only command right
                    now is `rs` to restart the server. [boolean] [default: false]
   -w, --watch      Trigger restarts by watching for changes to required files
-                                                       [boolean] [default: true]
+                                                      [boolean] [default: false]
   -s, --supervise  Supervise and restart the process when it exits indefinitely
                                                       [boolean] [default: false]
       --esbuild    Use esbuild for compiling files    [boolean] [default: false]
