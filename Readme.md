@@ -23,7 +23,7 @@ wds --inspect some-test.test.ts
 
 - Builds and runs TypeScript really fast (using [`swc`](https://github.com/swc-project/swc) or [`esbuild`](https://github.com/evanw/esbuild))
 - Incrementally rebuilds only what has changed in the `--watch` mode, and restarts the process when files change
-- Supervises the node.js process with `--supervise` to keep incremental context around on process crash, and can restart on demand in the `--commands` mode
+- Execute commands on demand with the `--commands` mode
 - Plays nice with node.js command line flags like `--inspect` or `--prof`
 - Supports node.js `ipc` channels between the process starting `wds` and the node.js process started by `wds`.
 - Produces sourcemaps which Just Work™️ by default for debugging with many editors (VSCode, IntelliJ, etc)

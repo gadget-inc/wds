@@ -33,12 +33,6 @@ export const cli = async () => {
       description: "Trigger restarts by watching for changes to required files",
       default: true,
     })
-    .option("supervise", {
-      alias: "s",
-      type: "boolean",
-      description: "Supervise and restart the process when it exits indefinitely",
-      default: false,
-    })
     .option("esbuild", {
       type: "boolean",
       description: "Use esbuild instead of sec",
@@ -49,7 +43,6 @@ export const cli = async () => {
     argv: args._ as any,
     terminalCommands: args.commands,
     reloadOnChanges: args.watch,
-    supervise: args.supervise,
     useEsbuild: args.esbuild,
   });
 };
@@ -157,7 +150,7 @@ export const wds = async (options: RunOptions) => {
   await startIPCServer(serverSocketPath, project);
 
   // kickoff the first child process
-  options.supervise && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
+  options.reloadOnChanges && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
   await project.invalidateBuildSetAndReload();
 
   process.on("SIGINT", () => {
@@ -170,9 +163,14 @@ export const wds = async (options: RunOptions) => {
   });
 
   project.supervisor.process.on("exit", (code) => {
-    log.debug(`child process exited with code ${code}, ${options.supervise ? "not exiting because supervise mode" : "exiting..."}`);
-    if (!options.supervise) {
-      project.shutdown(code ?? 1);
+    const logShutdown = (explanation: string) => {
+      log.debug(`child process exited with code ${code}, ${explanation}`);
+    };
+    if (options.reloadOnChanges) {
+      logShutdown("not exiting because we're on 'watch' mode");
+      return;
     }
+    logShutdown("shutting down project since it's no longer needed...");
+    project.shutdown(code ?? 1);
   });
 };

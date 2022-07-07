@@ -58,7 +58,7 @@ export class Supervisor extends EventEmitter {
     process.on("message", onParentProcessMessage);
     this.process.on("message", onChildProcessMessage);
     this.process.on("exit", (code, signal) => {
-      if (signal !== "SIGKILL" && this.options.supervise) {
+      if (signal !== "SIGKILL") {
         log.warn(`process exited with ${code}`);
       }
       this.process.off("message", onChildProcessMessage);
