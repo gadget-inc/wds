@@ -1,4 +1,4 @@
-import { ChildProcess, spawn } from "child_process";
+import { ChildProcess, spawn, StdioOptions } from "child_process";
 import { EventEmitter } from "events";
 import { RunOptions } from "./Options";
 import { Project } from "./Project";
@@ -34,7 +34,10 @@ export class Supervisor extends EventEmitter {
       this.process.kill("SIGKILL");
     }
 
-    const stdio: Array<null | "inherit" | "ipc"> = [null, "inherit", "inherit"];
+    const stdio: StdioOptions = [null, "inherit", "inherit"];
+    if (!this.options.terminalCommands) {
+      stdio[0] = "inherit";
+    }
     if (process.send) {
       // WDS was called from a process that has IPC
       stdio.push("ipc");
@@ -48,6 +51,10 @@ export class Supervisor extends EventEmitter {
       },
       stdio: stdio,
     });
+
+    if (this.options.terminalCommands) {
+      this.process.stdin!.end();
+    }
 
     const onChildProcessMessage = (message: any) => {
       if (process.send) process.send(message);

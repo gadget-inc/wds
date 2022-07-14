@@ -1,6 +1,15 @@
-import {spawn} from "child_process";
+import {ChildProcess, spawn} from "child_process";
 import * as path from "path";
 import {range} from "lodash";
+
+const childExit = (child: ChildProcess) => {
+  return new Promise<void>((resolve) => {
+    child.on("exit", (code: number) => {
+      resolve();
+      expect(code).toEqual(0);
+    });
+  });
+}
 
 test("it proxies ipc messages", async () => {
   const binPath = path.join(__dirname, "../pkg/wds.bin.js");
@@ -61,10 +70,56 @@ test("it doesn't setup ipc if it wasn't setup with ipc itself", async () => {
     }
   );
 
-  await new Promise<void>((resolve) => {
-    child.on("exit", (code) => {
-      resolve();
-      expect(code).toEqual(0);
-    });
-  });
+  await childExit(child);
 });
+
+test("it inherits stdin if WDS was started without terminal commands", async () => {
+  const binPath = path.join(__dirname, "../pkg/wds.bin.js");
+  const scriptPath = path.join(__dirname, "fixtures/src/echo.ts");
+
+  const child = spawn(
+    "node",
+    [binPath, scriptPath],
+    {
+      env: process.env,
+    }
+  );
+
+  let output = "";
+
+  child.stdin.write("test");
+  child.stdin.end();
+
+  child.stdout.on("data", (data) => {
+    output += data;
+  })
+
+  await childExit(child);
+  expect(output).toEqual("test");
+});
+
+test("it doesn't have any stdin if wds is started with terminal commands", async() => {
+  const binPath = path.join(__dirname, "../pkg/wds.bin.js");
+  const scriptPath = path.join(__dirname, "fixtures/src/echo.ts");
+
+  const child = spawn(
+    "node",
+    [binPath, scriptPath, "--commands"],
+    {
+      env: process.env,
+    }
+  );
+
+  let output = "";
+
+  child.stdin.write("test");
+  child.stdin.end();
+
+  child.stdout.on("data", (data) => {
+    output += data;
+  })
+
+  await childExit(child);
+
+  expect(output).toEqual("");
+})
