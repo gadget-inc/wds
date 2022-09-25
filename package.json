@@ -55,7 +55,7 @@
     "@types/jest": "^27.4.0",
     "@types/lodash": "^4.14.185",
     "@types/node": "^14.14.14",
-    "@types/yargs": "^15.0.12",
+    "@types/yargs": "^15.0.14",
     "eslint": "^7.15.0",
     "eslint-plugin-jest": "^25.3.4",
     "gitpkg": "^1.0.0-beta.2",
