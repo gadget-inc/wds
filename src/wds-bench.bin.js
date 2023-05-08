@@ -10,10 +10,6 @@ export const cli = async () => {
       type: "number",
       default: 10,
     })
-    .option("esbuild", {
-      type: "boolean",
-      description: "Use the esbuild compiler",
-    })
     .option("type", {
       choices: ["boot", "reload"],
       description: `Type of benchmark to run
@@ -26,7 +22,6 @@ export const cli = async () => {
   const benchArgs = {
     runs: args.runs,
     argv: args._,
-    esbuild: args.esbuild,
   };
 
   switch (args.type) {

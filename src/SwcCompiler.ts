@@ -11,7 +11,7 @@ import { log, projectConfig } from "./utils";
 // https://esbuild.github.io/api/#resolve-extensions
 const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
 
-export class MissingDestinationError extends Error {}
+export class MissingDestinationError extends Error { }
 
 const SWC_DEFAULTS: Config = {
   env: {
@@ -126,7 +126,7 @@ export class SwcCompiler implements Compiler {
 
     let swcConfig: Options;
 
-    if (config.swc === ".swcrc") {
+    if (!config.swc || config.swc === ".swcrc") {
       swcConfig = { swcrc: true };
     } else if (config.swc === undefined) {
       swcConfig = SWC_DEFAULTS;
@@ -211,9 +211,7 @@ export class SwcCompiler implements Compiler {
 
   /** The list of globby patterns to use when searching for files to build */
   private fileGlobPatterns(config: ProjectConfig) {
-    const extensions = config.esbuild?.resolveExtensions || DefaultExtensions;
-
-    return [`**/*{${extensions.join(",")}}`];
+    return [`**/*{${config.extensions.join(",")}}`];
   }
 
   /** The list of globby patterns to ignore use when searching for files to build */

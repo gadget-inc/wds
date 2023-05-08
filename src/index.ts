@@ -7,7 +7,6 @@ import path from "path";
 import readline from "readline";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { EsBuildCompiler } from "./EsBuildCompiler";
 import type { RunOptions } from "./Options";
 import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
@@ -32,18 +31,12 @@ export const cli = async () => {
       type: "boolean",
       description: "Trigger restarts by watching for changes to required files",
       default: false,
-    })
-    .option("esbuild", {
-      type: "boolean",
-      description: "Use esbuild instead of sec",
-      default: false,
     }).argv;
 
   return await wds({
     argv: args._ as any,
     terminalCommands: args.commands,
     reloadOnChanges: args.watch,
-    useEsbuild: args.esbuild,
   });
 };
 
@@ -140,7 +133,7 @@ export const wds = async (options: RunOptions) => {
     serverSocketPath = path.join(workDir, "ipc.sock");
   }
 
-  const compiler = options.useEsbuild ? new EsBuildCompiler(workspaceRoot, workDir) : new SwcCompiler(workspaceRoot, workDir);
+  const compiler = new SwcCompiler(workspaceRoot, workDir);
 
   const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())), compiler);
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);

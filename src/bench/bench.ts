@@ -38,15 +38,11 @@ function monitorLogs(childProcess: ChildProcess): Promise<ChildProcessResult> {
   });
 }
 
-function spawnOnce(args: { watch?: boolean; filename: string; esbuild: boolean }): ChildProcess {
+function spawnOnce(args: { watch?: boolean; filename: string }): ChildProcess {
   const extraArgs = [];
 
   if (args.watch) {
     extraArgs.push("--watch");
-  }
-
-  if (args.esbuild) {
-    extraArgs.push("--esbuild");
   }
 
   const binPath = path.resolve("pkg/wds.bin.js");
@@ -112,7 +108,6 @@ function report(results: Array<RunResult>): Record<string, Record<string, number
 }
 
 export type BenchArgs = {
-  esbuild: boolean;
   runs: number;
   argv: Array<string>;
 };
@@ -135,7 +130,7 @@ export async function benchBoot(args: BenchArgs): Promise<void> {
 
   for (let i = 0; i < args.runs; i++) {
     const startTime = process.hrtime.bigint();
-    const childProcess = spawnOnce({ filename: execPath(args), esbuild: args.esbuild });
+    const childProcess = spawnOnce({ filename: execPath(args) });
     const result = await monitorLogs(childProcess);
     const endTime = process.hrtime.bigint();
     results.push({
@@ -159,7 +154,7 @@ export async function benchReload(args: BenchArgs): Promise<void> {
 
   process.stdout.write(`Starting reload benchmark (pid=${process.pid})\n`);
 
-  const childProcess = spawnOnce({ watch: true, filename: filepath, esbuild: args.esbuild });
+  const childProcess = spawnOnce({ watch: true, filename: filepath });
   const _ignoreInitialBoot = await monitorLogs(childProcess);
 
   for (let i = 0; i < args.runs; i++) {
