@@ -11,7 +11,7 @@ import { log, projectConfig } from "./utils";
 // https://esbuild.github.io/api/#resolve-extensions
 const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
 
-export class MissingDestinationError extends Error { }
+export class MissingDestinationError extends Error {}
 
 const SWC_DEFAULTS: Config = {
   env: {
