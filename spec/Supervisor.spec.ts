@@ -1,6 +1,6 @@
-import {ChildProcess, spawn} from "child_process";
+import { ChildProcess, spawn } from "child_process";
 import * as path from "path";
-import {range} from "lodash";
+import { range } from "lodash";
 
 const childExit = (child: ChildProcess) => {
   return new Promise<void>((resolve) => {
@@ -98,7 +98,7 @@ test("it inherits stdin if WDS was started without terminal commands", async () 
   expect(output).toEqual("test");
 });
 
-test("it doesn't have any stdin if wds is started with terminal commands", async() => {
+test("it doesn't have any stdin if wds is started with terminal commands", async () => {
   const binPath = path.join(__dirname, "../pkg/wds.bin.js");
   const scriptPath = path.join(__dirname, "fixtures/src/echo.ts");
 

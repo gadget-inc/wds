@@ -8,11 +8,11 @@ import readline from "readline";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { EsBuildCompiler } from "./EsBuildCompiler";
-import { MiniServer } from "./mini-server";
-import { RunOptions } from "./Options";
+import type { RunOptions } from "./Options";
 import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
 import { SwcCompiler } from "./SwcCompiler";
+import { MiniServer } from "./mini-server";
 import { log, projectConfig } from "./utils";
 
 export const cli = async () => {

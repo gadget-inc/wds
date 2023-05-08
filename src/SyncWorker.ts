@@ -1,6 +1,7 @@
 // have to use a module import like this so we can re-access imported properties as they might change, see https://github.com/nodejs/node/issues/36531
 import { promises as fs } from "fs";
-import workerThreads, { MessageChannel, MessagePort, receiveMessageOnPort, Worker } from "worker_threads";
+import type { MessagePort } from "worker_threads";
+import workerThreads, { MessageChannel, receiveMessageOnPort, Worker } from "worker_threads";
 import { log } from "./utils";
 
 log.debug("syncworker file boot", { isMainThread: workerThreads.isMainThread, hasWorkerData: !!workerThreads.workerData });

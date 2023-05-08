@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import { defaults } from "lodash";
 import path from "path";
-import { ProjectConfig } from "./Options";
+import type { ProjectConfig } from "./Options";
 
 const logPrefix = `[wds pid=${process.pid}]`;
 export const log = {
@@ -11,7 +11,7 @@ export const log = {
   error: (...args: any[]) => console.error(logPrefix, ...args),
 };
 
-export const time = async <T extends any>(run: () => Promise<T>) => {
+export const time = async <T>(run: () => Promise<T>) => {
   const time = process.hrtime();
   await run();
   const diff = process.hrtime(time);

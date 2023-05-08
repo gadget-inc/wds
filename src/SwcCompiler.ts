@@ -1,10 +1,11 @@
-import { Config, Options, transformFile } from "@swc/core";
+import type { Config, Options } from "@swc/core";
+import { transformFile } from "@swc/core";
 import findRoot from "find-root";
 import * as fs from "fs/promises";
 import globby from "globby";
 import path from "path";
-import { Compiler } from "./Compiler";
-import { ProjectConfig } from "./Options";
+import type { Compiler } from "./Compiler";
+import type { ProjectConfig } from "./Options";
 import { log, projectConfig } from "./utils";
 
 // https://esbuild.github.io/api/#resolve-extensions

@@ -3,8 +3,8 @@ import * as esbuild from "esbuild";
 import findRoot from "find-root";
 import globby from "globby";
 import path from "path";
-import { Compiler } from "./Compiler";
-import { ProjectConfig } from "./Options";
+import type { Compiler } from "./Compiler";
+import type { ProjectConfig } from "./Options";
 import { log, projectConfig, time } from "./utils";
 
 // https://esbuild.github.io/api/#resolve-extensions

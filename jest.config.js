@@ -1,4 +1,6 @@
 module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
+  transform: {
+    "^.+\\.[jt]sx?$": ["@swc/jest", { sourceMaps: "inline" }],
+  },
+  testEnvironment: "node",
 };
