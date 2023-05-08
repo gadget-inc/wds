@@ -27,9 +27,9 @@ test("throws if the compilation fails", async () => {
 test("compiles lazy import", async () => {
   const content = await compile("./lazy_import.ts");
   expect(content).toContain(`
-function _childProcess() {
-    const data = require("child_process");
-    _childProcess = function() {
+function _child_process() {
+    const data = require(\"child_process\");
+    _child_process = function() {
         return data;
     };
     return data;

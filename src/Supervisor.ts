@@ -1,7 +1,8 @@
-import { ChildProcess, spawn, StdioOptions } from "child_process";
+import type { ChildProcess, StdioOptions } from "child_process";
+import { spawn } from "child_process";
 import { EventEmitter } from "events";
-import { RunOptions } from "./Options";
-import { Project } from "./Project";
+import type { RunOptions } from "./Options";
+import type { Project } from "./Project";
 import { log } from "./utils";
 
 /** */

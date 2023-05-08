@@ -1,5 +1,5 @@
-import { Options as SwcOptions } from "@swc/core";
-import { BuildOptions } from "esbuild";
+import type { Options as SwcOptions } from "@swc/core";
+import type { BuildOptions } from "esbuild";
 
 type SwcConfig = ".swcrc" | SwcOptions;
 

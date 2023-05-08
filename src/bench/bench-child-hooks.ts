@@ -1,5 +1,6 @@
 import { json } from "./json";
-import { ChildProcessResult, MARKER } from "./protocol";
+import type { ChildProcessResult } from "./protocol";
+import { MARKER } from "./protocol";
 
 const startTime = process.hrtime.bigint();
 

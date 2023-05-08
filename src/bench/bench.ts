@@ -1,11 +1,13 @@
-import { ChildProcessByStdio, spawn } from "child_process";
+import type { ChildProcessByStdio } from "child_process";
+import { spawn } from "child_process";
 import findRoot from "find-root";
 import * as fs from "fs/promises";
 import path from "path";
-import { Readable } from "stream";
+import type { Readable } from "stream";
 import { log } from "../utils";
 import { json } from "./json";
-import { ChildProcessResult, MARKER } from "./protocol";
+import type { ChildProcessResult } from "./protocol";
+import { MARKER } from "./protocol";
 
 type ChildProcess = ChildProcessByStdio<null, Readable, null>;
 

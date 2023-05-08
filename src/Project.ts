@@ -1,8 +1,8 @@
-import { FSWatcher } from "chokidar";
+import type { FSWatcher } from "chokidar";
 import { compact, debounce } from "lodash";
-import { Compiler } from "./Compiler";
-import { ProjectConfig } from "./Options";
-import { Supervisor } from "./Supervisor";
+import type { Compiler } from "./Compiler";
+import type { ProjectConfig } from "./Options";
+import type { Supervisor } from "./Supervisor";
 import { log } from "./utils";
 
 interface ReloadBatch {

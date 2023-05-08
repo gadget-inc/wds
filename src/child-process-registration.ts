@@ -1,5 +1,5 @@
 import { throttle } from "lodash";
-import { SyncWorkerData } from "./SyncWorker";
+import type { SyncWorkerData } from "./SyncWorker";
 import { log } from "./utils";
 
 /* eslint-disable @typescript-eslint/no-var-requires */
