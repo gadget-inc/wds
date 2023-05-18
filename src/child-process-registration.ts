@@ -36,7 +36,13 @@ const notifyParentProcessOfRequire = (filename: string) => {
 
 if (!workerData || !(workerData as SyncWorkerData).isWDSSyncWorker) {
   const worker = new SyncWorker(path.join(__dirname, "child-process-ipc-worker.js"));
-  const paths: Record<string, string> = {};
+  const paths: Record<
+    string,
+    | string
+    | {
+        ignored: boolean;
+      }
+  > = {};
 
   // Compile a given file by sending it into our async-to-sync wrapper worker js file
   // The leader process returns us a list of all the files it just compiled, so that we don't have to pay the IPC boundary cost for each file after this one
@@ -63,9 +69,11 @@ if (!workerData || !(workerData as SyncWorkerData).isWDSSyncWorker) {
   for (const extension of process.env["WDS_EXTENSIONS"]!.split(",")) {
     require.extensions[extension] = (module: any, filename: string) => {
       const compiledFilename = compile(filename);
-      const content = fs.readFileSync(compiledFilename, "utf8");
-      notifyParentProcessOfRequire(filename);
-      module._compile(content, filename);
+      if (typeof compiledFilename === "string" || !compiledFilename.ignored) {
+        const content = fs.readFileSync(compiledFilename, "utf8");
+        notifyParentProcessOfRequire(filename);
+        module._compile(content, filename);
+      }
     };
   }
 }

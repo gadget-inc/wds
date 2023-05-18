@@ -10,7 +10,7 @@ import { hideBin } from "yargs/helpers";
 import type { RunOptions } from "./Options";
 import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
-import { SwcCompiler } from "./SwcCompiler";
+import { MissingDestinationError, SwcCompiler } from "./SwcCompiler";
 import { MiniServer } from "./mini-server";
 import { log, projectConfig } from "./utils";
 
@@ -93,6 +93,14 @@ const startIPCServer = async (socketPath: string, project: Project) => {
       return await project.compiler.fileGroup(filename);
     } catch (error) {
       log.error(`Error compiling file ${filename}:`, error);
+
+      if (error instanceof MissingDestinationError && error.ignoredFile) {
+        return {
+          [filename]: {
+            ignored: true,
+          },
+        };
+      }
     }
   };
 
