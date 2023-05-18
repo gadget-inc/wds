@@ -34,7 +34,7 @@
     "test": "jest"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=16.0.0"
   },
   "dependencies": {
     "@cspotcode/source-map-support": "^0.8.1",

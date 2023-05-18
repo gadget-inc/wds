@@ -3,7 +3,6 @@ name: Test
 on:
   push:
   workflow_call:
-  pull_request:
 
 jobs:
   build:
@@ -11,15 +10,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: ./.github/actions/setup-test-env
-    - run: yarn build
-    - run: test/test.sh
-    - run: yarn jest
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/setup-test-env
+      - run: yarn build
+      - run: test/test.sh
+      - run: yarn jest
 
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: ./.github/actions/setup-test-env
-    - run: yarn lint
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/setup-test-env
+      - run: yarn lint
