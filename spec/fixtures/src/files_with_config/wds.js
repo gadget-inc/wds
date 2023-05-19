@@ -10,5 +10,6 @@ module.exports = {
       "type": "commonjs",
       "strictMode": false
     }
-  }
+  },
+  ignore: ["ignored.ts"]
 }

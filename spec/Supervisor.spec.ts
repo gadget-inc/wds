@@ -42,7 +42,7 @@ test("it proxies ipc messages", async () => {
     });
   });
 
-  for (let number of messagesToChild) {
+  for (const number of messagesToChild) {
     child.send(number);
   }
 

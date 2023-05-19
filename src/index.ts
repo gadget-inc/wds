@@ -148,7 +148,7 @@ export const wds = async (options: RunOptions) => {
 
   if (options.reloadOnChanges) startFilesystemWatcher(project);
   if (options.terminalCommands) startTerminalCommandListener(project);
-  await startIPCServer(serverSocketPath, project);
+  const server = await startIPCServer(serverSocketPath, project);
 
   // kickoff the first child process
   options.reloadOnChanges && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
@@ -174,4 +174,6 @@ export const wds = async (options: RunOptions) => {
     logShutdown("shutting down project since it's no longer needed...");
     project.shutdown(code ?? 1);
   });
+
+  return server;
 };
