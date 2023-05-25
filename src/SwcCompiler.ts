@@ -11,7 +11,14 @@ import { log, projectConfig } from "./utils";
 // https://esbuild.github.io/api/#resolve-extensions
 const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
 
-export class MissingDestinationError extends Error {}
+export class MissingDestinationError extends Error {
+  ignoredFile: boolean;
+
+  constructor(error: { message: string; ignoredFile?: boolean }) {
+    super(error.message);
+    this.ignoredFile = !!error.ignoredFile;
+  }
+}
 
 const SWC_DEFAULTS: Config = {
   env: {
@@ -178,9 +185,7 @@ export class SwcCompiler implements Compiler {
     // TODO: Use the config
     const { root, fileNames, swcConfig } = await this.getModule(filename);
 
-    await this.reportErrors(async () => {
-      await Promise.all(fileNames.map((filename) => this.buildFile(filename, root, swcConfig)));
-    });
+    await this.reportErrors(Promise.allSettled(fileNames.map((filename) => this.buildFile(filename, root, swcConfig))));
 
     log.debug("started build", {
       root,
@@ -190,11 +195,11 @@ export class SwcCompiler implements Compiler {
     });
   }
 
-  private async reportErrors<T>(run: () => Promise<T>) {
-    try {
-      return await run();
-    } catch (error) {
-      log.error(error);
+  private async reportErrors<T>(results: Promise<PromiseSettledResult<T>[]>) {
+    for (const result of await results) {
+      if (result.status === "rejected") {
+        log.error(result.reason);
+      }
     }
   }
 
@@ -203,9 +208,15 @@ export class SwcCompiler implements Compiler {
 
     // TODO: Understand cases in which the file destination could be missing
     if (ignorePattern) {
-      return `File ${filename} is imported but not being built because it is explicitly ignored in the wds project config. It is being ignored by the provided glob pattern '${ignorePattern}', remove this pattern from the project config or don't import this file to fix.`;
+      return {
+        message: `File ${filename} is imported but not being built because it is explicitly ignored in the wds project config. It is being ignored by the provided glob pattern '${ignorePattern}', remove this pattern from the project config or don't import this file to fix.`,
+        ignoredFile: true,
+      };
     } else {
-      return `Built output for file ${filename} not found. Is it outside the project directory, or has it failed to build?`;
+      return {
+        message: `Built output for file ${filename} not found. Is it outside the project directory, or has it failed to build?`,
+        ignoredFile: false,
+      };
     }
   }
 

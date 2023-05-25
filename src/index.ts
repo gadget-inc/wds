@@ -10,7 +10,7 @@ import { hideBin } from "yargs/helpers";
 import type { RunOptions } from "./Options";
 import { Project } from "./Project";
 import { Supervisor } from "./Supervisor";
-import { SwcCompiler } from "./SwcCompiler";
+import { MissingDestinationError, SwcCompiler } from "./SwcCompiler";
 import { MiniServer } from "./mini-server";
 import { log, projectConfig } from "./utils";
 
@@ -93,6 +93,14 @@ const startIPCServer = async (socketPath: string, project: Project) => {
       return await project.compiler.fileGroup(filename);
     } catch (error) {
       log.error(`Error compiling file ${filename}:`, error);
+
+      if (error instanceof MissingDestinationError && error.ignoredFile) {
+        return {
+          [filename]: {
+            ignored: true,
+          },
+        };
+      }
     }
   };
 
@@ -140,7 +148,7 @@ export const wds = async (options: RunOptions) => {
 
   if (options.reloadOnChanges) startFilesystemWatcher(project);
   if (options.terminalCommands) startTerminalCommandListener(project);
-  await startIPCServer(serverSocketPath, project);
+  const server = await startIPCServer(serverSocketPath, project);
 
   // kickoff the first child process
   options.reloadOnChanges && log.info(`Supervision starting for command: node ${options.argv.join(" ")}`);
@@ -166,4 +174,6 @@ export const wds = async (options: RunOptions) => {
     logShutdown("shutting down project since it's no longer needed...");
     project.shutdown(code ?? 1);
   });
+
+  return server;
 };

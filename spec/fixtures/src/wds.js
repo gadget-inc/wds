@@ -13,5 +13,5 @@ module.exports = {
       "strictMode": true,
       "lazy": true
     }
-  }
+  },
 }
