@@ -22,9 +22,7 @@
             rec {
               bash = pkgs.bash;
               nodejs = pkgs.nodejs-18_x;
-              yarn = pkgs.yarn.override {
-                inherit nodejs;
-              };
+              pnpm = pkgs.nodePackages.pnpm;
             };
 
           devShell = pkgs.mkShell {
