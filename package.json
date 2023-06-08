@@ -22,14 +22,15 @@
     "LICENSE.txt"
   ],
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "build": "rm -rf pkg && tsc && chmod +x pkg/wds.bin.js pkg/wds-bench.bin.js",
-    "prepublishOnly": "yarn run build",
+    "prepublishOnly": "pnpm run build",
     "watch": "tsc -w",
     "typecheck": "tsc --noEmit",
-    "lint": "yarn run lint:prettier && yarn run lint:eslint",
-    "lint:prettier": "node --max-old-space-size=4096 node_modules/.bin/prettier --check \"src/**/*.{js,ts,tsx}\"",
-    "lint:eslint": "node --max-old-space-size=4096 node_modules/.bin/eslint --quiet --ext ts,tsx src",
-    "lint:fix": "node --max-old-space-size=4096 node_modules/.bin/prettier --write --check \"src/**/*.{js,ts,tsx}\" && eslint --ext ts,tsx --fix src",
+    "lint": "pnpm run lint:prettier && pnpm run lint:eslint",
+    "lint:prettier": "NODE_OPTIONS=\"--max-old-space-size=4096\" prettier --check \"src/**/*.{js,ts,tsx}\"",
+    "lint:eslint": "NODE_OPTIONS=\"--max-old-space-size=4096\" eslint --quiet --ext ts,tsx src",
+    "lint:fix": "NODE_OPTIONS=\"--max-old-space-size=4096\" prettier --write --check \"src/**/*.{js,ts,tsx}\" && eslint --ext ts,tsx --fix src",
     "prerelease": "gitpkg publish",
     "test": "jest"
   },

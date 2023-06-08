@@ -12,13 +12,17 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup-test-env
-      - run: yarn build
+      - run: pnpm build
+        shell: nix develop -c bash -eo pipefail -l {0}
       - run: test/test.sh
-      - run: yarn jest
+        shell: nix develop -c bash -eo pipefail -l {0}
+      - run: pnpm jest
+        shell: nix develop -c bash -eo pipefail -l {0}
 
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup-test-env
-      - run: yarn lint
+      - run: pnpm lint
+        shell: nix develop -c bash -eo pipefail -l {0}

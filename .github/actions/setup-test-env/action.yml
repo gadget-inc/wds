@@ -1,16 +1,16 @@
-name: 'Setup test environment'
-description: ''
+name: "Setup test environment"
+description: ""
 inputs: {}
 outputs: {}
 runs:
-    using: "composite"
-    steps:
+  using: "composite"
+  steps:
     - uses: cachix/install-nix-action@v20
     - run: nix flake check
       shell: bash
-    - name: Add Gadget yarn registry
+    - name: Add Gadget npm registry
       shell: nix develop -c bash -eo pipefail -l {0}
       run: npm config set @gadget-client:registry https://registry.gadget.dev/npm
-    - name: Install dependencies with yarn install
+    - name: Install dependencies with pnpm
       shell: nix develop -c bash -eo pipefail -l {0}
-      run: yarn install
+      run: pnpm install
