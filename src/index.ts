@@ -156,11 +156,11 @@ export const wds = async (options: RunOptions) => {
 
   process.on("SIGINT", () => {
     log.debug(`process ${process.pid} got SIGINT`);
-    project.shutdown(0);
+    void project.shutdown(0);
   });
   process.on("SIGTERM", () => {
     log.debug(`process ${process.pid} got SIGTERM`);
-    project.shutdown(0);
+    void project.shutdown(0);
   });
 
   project.supervisor.process.on("exit", (code) => {
@@ -172,7 +172,7 @@ export const wds = async (options: RunOptions) => {
       return;
     }
     logShutdown("shutting down project since it's no longer needed...");
-    project.shutdown(code ?? 1);
+    void project.shutdown(code ?? 1);
   });
 
   return server;

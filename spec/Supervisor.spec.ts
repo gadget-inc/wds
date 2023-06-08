@@ -2,6 +2,8 @@ import { ChildProcess, spawn } from "child_process";
 import { range } from "lodash";
 import * as path from "path";
 
+jest.setTimeout(10000);
+
 const childExit = (child: ChildProcess) => {
   return new Promise<void>((resolve) => {
     child.on("exit", (code: number) => {

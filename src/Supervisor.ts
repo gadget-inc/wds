@@ -1,6 +1,7 @@
+import { setTimeout } from "timers/promises";
 import type { ChildProcess, StdioOptions } from "child_process";
 import { spawn } from "child_process";
-import { EventEmitter } from "events";
+import { EventEmitter, once } from "events";
 import type { RunOptions } from "./Options";
 import type { Project } from "./Project";
 import { log } from "./utils";
@@ -12,28 +13,41 @@ export class Supervisor extends EventEmitter {
     super();
   }
 
-  stop() {
-    if (this.process) {
-      this.process.kill("SIGTERM");
+  /**
+   * Stop the process with a graceful SIGTERM, then SIGKILL after a timeout
+   * Kills the whole process group so that any subprocesses of the process are also killed
+   * See https://azimi.me/2014/12/31/kill-child_process-node-js.html for more information
+   */
+  async stop() {
+    if (!this.process || !this.process.pid) return;
+
+    const ref = this.process;
+    const exit = once(ref, "exit");
+    this.kill("SIGTERM");
+
+    await Promise.race([exit, setTimeout(5000)]);
+    if (!ref.killed) {
+      this.kill("SIGKILL", ref.pid);
     }
-    const process = this.process;
-    setTimeout(() => {
-      if (!process.killed) {
-        process.kill("SIGKILL");
-      }
-    }, 5000);
   }
 
-  kill() {
-    if (this.process) {
-      this.process.kill("SIGKILL");
+  kill(signal = "SIGKILL", pid = this.process?.pid) {
+    if (pid) {
+      try {
+        process.kill(-pid, signal);
+      } catch (error: any) {
+        if (error.code == "ESRCH") {
+          // process can't be found, is already dead
+          return;
+        } else {
+          throw error;
+        }
+      }
     }
   }
 
   restart() {
-    if (this.process) {
-      this.process.kill("SIGKILL");
-    }
+    this.kill();
 
     const stdio: StdioOptions = [null, "inherit", "inherit"];
     if (!this.options.terminalCommands) {
@@ -51,6 +65,7 @@ export class Supervisor extends EventEmitter {
         WDS_EXTENSIONS: this.project.config.extensions.join(","),
       },
       stdio: stdio,
+      detached: true,
     });
 
     if (this.options.terminalCommands) {
