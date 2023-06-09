@@ -6,11 +6,34 @@ runs:
   using: "composite"
   steps:
     - uses: cachix/install-nix-action@v20
-    - run: nix flake check
+    - run: |
+        source <(nix print-dev-env --show-trace) 
+        output_file="nix-env.txt"
+
+        # Clear the output file
+        > $output_file
+
+        # Loop over each variable in the environment
+        while IFS='=' read -r -d '' name value; do
+            # Skip if the variable is a function or read-only or non-alphanumeric
+            [[ "$(declare -p $name)" =~ "declare -[a-z]*r[a-z]* " ]] && continue
+            [[ ! $name =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] && continue
+
+            # Check if the variable value contains a newline
+            if [[ "$value" != *$'\n'* ]]; then
+                # It doesn't, so write the variable and its value (stripping quotes) to the file
+                echo "${name}=${value//\"/}" >> $output_file
+            fi
+        done < <(env -0)
+
+        # useful for debugging what env is exported
+        # cat nix-env.txt
+      shell: bash
+    - run: cat nix-env.txt >> "$GITHUB_ENV"
       shell: bash
     - name: Add Gadget npm registry
-      shell: nix develop -c bash -eo pipefail -l {0}
+      shell: bash
       run: npm config set @gadget-client:registry https://registry.gadget.dev/npm
     - name: Install dependencies with pnpm
-      shell: nix develop -c bash -eo pipefail -l {0}
+      shell: bash
       run: pnpm install
