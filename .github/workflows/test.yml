@@ -13,11 +13,8 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup-test-env
       - run: pnpm build
-        shell: nix develop -c bash -eo pipefail -l {0}
       - run: test/test.sh
-        shell: nix develop -c bash -eo pipefail -l {0}
       - run: pnpm jest
-        shell: nix develop -c bash -eo pipefail -l {0}
 
   lint:
     runs-on: ubuntu-latest
@@ -25,4 +22,3 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup-test-env
       - run: pnpm lint
-        shell: nix develop -c bash -eo pipefail -l {0}
