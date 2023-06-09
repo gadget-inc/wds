@@ -58,8 +58,8 @@ export class Project {
     this.supervisor.restart();
   }
 
-  shutdown(code = 0) {
-    this.supervisor.stop();
+  async shutdown(code = 0) {
+    await this.supervisor.stop();
     for (const cleanup of this.cleanups) {
       cleanup();
     }
