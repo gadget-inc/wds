@@ -22,7 +22,6 @@
     "LICENSE.txt"
   ],
   "scripts": {
-    "preinstall": "npx only-allow pnpm",
     "build": "rm -rf pkg && tsc && chmod +x pkg/wds.bin.js pkg/wds-bench.bin.js",
     "prepublishOnly": "pnpm run build",
     "watch": "tsc -w",
