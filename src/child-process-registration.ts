@@ -20,6 +20,9 @@ const throttledRequireFlush = throttle(() => {
       300
     );
 
+    request.on("error", (error: any) => {
+      log.debug(`Unexpected request error while flushing require notifications`, error);
+    });
     request.write(JSON.stringify(pendingRequireNotifications));
     request.end();
     pendingRequireNotifications = [];
