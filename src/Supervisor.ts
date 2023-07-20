@@ -36,9 +36,8 @@ export class Supervisor extends EventEmitter {
       try {
         process.kill(-pid, signal);
       } catch (error: any) {
-        if (error.code == "ESRCH") {
-          // process can't be found, is already dead
-          return;
+        if (error.code == "ESRCH" || error.code == "EPERM") {
+          // process can't be found or can't be killed again, its already dead
         } else {
           throw error;
         }
