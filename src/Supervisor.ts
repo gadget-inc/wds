@@ -1,10 +1,10 @@
-import { setTimeout } from "timers/promises";
 import type { ChildProcess, StdioOptions } from "child_process";
 import { spawn } from "child_process";
 import { EventEmitter, once } from "events";
-import type { RunOptions } from "./Options";
-import type { Project } from "./Project";
-import { log } from "./utils";
+import { setTimeout } from "timers/promises";
+import type { RunOptions } from "./Options.js";
+import type { Project } from "./Project.js";
+import { log } from "./utils.js";
 
 /** */
 export class Supervisor extends EventEmitter {

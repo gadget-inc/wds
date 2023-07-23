@@ -1,12 +1,16 @@
 import * as fs from "fs/promises";
 import os from "os";
 import path from "path";
-import { MissingDestinationError, SwcCompiler } from "../src/SwcCompiler";
-import { log } from "../src/utils";
+import { fileURLToPath } from "url";
+import { expect, test, vi } from "vitest";
+import { MissingDestinationError, SwcCompiler } from "../src/SwcCompiler.js";
+import { log } from "../src/utils.js";
+
+const dirname = fileURLToPath(new URL(".", import.meta.url));
 
 const compile = async (filename: string, root = "fixtures/src") => {
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "wds-test"));
-  const rootDir = path.join(__dirname, root);
+  const rootDir = path.join(dirname, root);
   const fullPath = path.join(rootDir, filename);
 
   const compiler = new SwcCompiler(rootDir, workDir);
@@ -47,12 +51,12 @@ test("throws if the file is ignored", async () => {
 test("logs error when a file in group fails compilation but continues", async () => {
   const errorLogs: any[] = [];
 
-  const mock = jest.spyOn(log, "error").mockImplementation((...args: any[]) => {
+  const mock = vi.spyOn(log, "error").mockImplementation((...args: any[]) => {
     errorLogs.push(args);
   });
 
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "wds-test"));
-  const rootDir = path.join(__dirname, "fixtures/failing");
+  const rootDir = path.join(dirname, "fixtures/failing");
   const fullPath = path.join(rootDir, "successful.ts");
   const compiler = new SwcCompiler(rootDir, workDir);
   await compiler.compile(fullPath);

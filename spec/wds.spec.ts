@@ -2,8 +2,11 @@ import assert from "assert";
 import type { ChildProcess } from "child_process";
 import http from "http";
 import path from "path";
-import { Supervisor } from "../src/Supervisor";
-import { wds } from "../src/index";
+import { fileURLToPath } from "url";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { Supervisor } from "../src/Supervisor.js";
+import { wds } from "../src/index.js";
+const dirname = fileURLToPath(new URL(".", import.meta.url));
 
 describe("wds", () => {
   let cwd: any;
@@ -33,15 +36,15 @@ describe("wds", () => {
   };
 
   beforeEach(() => {
-    cwd = jest.spyOn(process, "cwd").mockImplementation(() => {
-      return path.resolve(__dirname, "fixtures/src/files_with_config");
+    cwd = vi.spyOn(process, "cwd").mockImplementation(() => {
+      return path.resolve(dirname, "fixtures/src/files_with_config");
     });
 
-    supervisorRestart = jest.spyOn(Supervisor.prototype, "restart").mockImplementation(function () {
+    supervisorRestart = vi.spyOn(Supervisor.prototype, "restart").mockImplementation(function () {
       const self = this as unknown as Supervisor;
       socketPath = self.socketPath;
       self.process = {
-        on: jest.fn(),
+        on: vi.fn(),
       } as unknown as ChildProcess;
       return self.process;
     });
@@ -58,7 +61,7 @@ describe("wds", () => {
       terminalCommands: false,
       reloadOnChanges: false,
     });
-    const result = (await sendCompileRequest(path.resolve(__dirname, "fixtures/src/files_with_config/ignored.ts"))) as Record<
+    const result = (await sendCompileRequest(path.resolve(dirname, "fixtures/src/files_with_config/ignored.ts"))) as Record<
       string,
       string | { ignored: boolean }
     >;
@@ -77,7 +80,7 @@ describe("wds", () => {
       terminalCommands: false,
       reloadOnChanges: false,
     });
-    const result = (await sendCompileRequest(path.resolve(__dirname, "fixtures/src/files_with_config/simple.ts"))) as Record<
+    const result = (await sendCompileRequest(path.resolve(dirname, "fixtures/src/files_with_config/simple.ts"))) as Record<
       string,
       string | { ignored: boolean }
     >;

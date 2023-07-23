@@ -9,7 +9,6 @@
     "target": "esnext"
   },
   "module": {
-    "type": "commonjs",
-    "lazy": true
+    "type": "es6"
   }
 }

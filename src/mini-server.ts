@@ -1,6 +1,6 @@
 import http from "http";
 import { promisify } from "util";
-import { log } from "./utils";
+import { log } from "./utils.js";
 
 /** represents a higher level incoming request */
 export class Request {
