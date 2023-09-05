@@ -1,9 +1,4 @@
 {
-  "env": {
-    "targets": {
-      "node": 18
-    }
-  },
   "jsc": {
     "parser": {
       "syntax": "typescript",

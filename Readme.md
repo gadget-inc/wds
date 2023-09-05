@@ -72,11 +72,6 @@ module.exports = {
 
 ```json
 {
-  "env": {
-    "targets": {
-      "node": 16
-    }
-  },
   "jsc": {
     "parser": {
       "syntax": "typescript",
@@ -124,18 +119,13 @@ And then, you can use `swc`'s standard syntax for the `.swcrc` file
 ```json
 // in .swcrc, these are the defaults wds uses
 {
-  "env": {
-    "targets": {
-      "node": 16
-    }
-  },
   "jsc": {
     "parser": {
       "syntax": "typescript",
       "decorators": true,
       "dynamicImport": true
     },
-    "target": "es2020"
+    "target": "es2022"
   },
   "module": {
     "type": "commonjs",
