@@ -64,7 +64,6 @@ export class Supervisor extends EventEmitter {
         WDS_EXTENSIONS: this.project.config.extensions.join(","),
       },
       stdio: stdio,
-      detached: true,
     });
 
     if (this.options.terminalCommands) {
