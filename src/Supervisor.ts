@@ -19,7 +19,11 @@ export class Supervisor extends EventEmitter {
    * See https://azimi.me/2014/12/31/kill-child_process-node-js.html for more information
    */
   async stop() {
+    // if we never started the child process, we don't need to do anything
     if (!this.process || !this.process.pid) return;
+
+    // if the child process has already exited, we don't need to do anything
+    if (this.process.exitCode !== null) return;
 
     const ref = this.process;
     const exit = once(ref, "exit");
