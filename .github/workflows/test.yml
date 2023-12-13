@@ -5,7 +5,7 @@ on:
   workflow_call:
 
 jobs:
-  build:
+  test:
     timeout-minutes: 30
     runs-on: ubuntu-latest
 
