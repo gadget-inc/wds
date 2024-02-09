@@ -22,3 +22,8 @@ echo "::group::Reload test ${args}"
 bash $DIR/reload/test.sh $args
 echo "::endgroup::"
 echo
+
+echo "::group::ParentCrash test ${args}"
+node_modules/.bin/zx $DIR/parent-crash/test.js $args
+echo "::endgroup::"
+echo
