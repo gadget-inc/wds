@@ -1,6 +1,6 @@
 {
   "name": "wds",
-  "version": "0.18.2",
+  "version": "0.19.0",
   "author": "Harry Brundage",
   "license": "MIT",
   "bin": {
