@@ -79,4 +79,20 @@ if (!workerData || !(workerData as SyncWorkerData).isWDSSyncWorker) {
       }
     };
   }
+
+  // monitor the parent process' health, if it dies, kill ourselves so we don't end up a zombie
+  const monitor = setInterval(() => {
+    try {
+      process.kill(process.ppid, 0);
+      // No error means the process exists
+    } catch (e) {
+      // An error means the process does not exist
+      log.error("wds parent process crashed, killing child");
+      process.kill(-1 * process.pid, "SIGKILL");
+    }
+  }, 1000);
+  monitor.unref();
+  process.on("beforeExit", () => {
+    clearInterval(monitor);
+  });
 }
