@@ -1,4 +1,4 @@
-import { promises as fs } from "fs";
+import { promises as fs } from "graceful-fs";
 import { defaults } from "lodash";
 import path from "path";
 import type { ProjectConfig } from "./Options";
