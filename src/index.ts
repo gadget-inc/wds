@@ -1,7 +1,7 @@
 import { watch } from "chokidar";
 import findRoot from "find-root";
 import findWorkspaceRoot from "find-yarn-workspace-root";
-import { promises as fs } from "fs";
+import { promises as fs } from "graceful-fs";
 import os from "os";
 import path from "path";
 import readline from "readline";
