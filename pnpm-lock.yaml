@@ -50,8 +50,8 @@ devDependencies:
     specifier: ^27.4.0
     version: 27.4.0
   '@types/lodash':
-    specifier: ^4.14.194
-    version: 4.14.194
+    specifier: ^4.17.1
+    version: 4.17.1
   '@types/node':
     specifier: ^18.11.9
     version: 18.11.9
@@ -1019,8 +1019,8 @@ packages:
       '@types/node': 18.19.15
     dev: true
 
-  /@types/lodash@4.14.194:
-    resolution: {integrity: sha512-r22s9tAS7imvBt2lyHC9B8AGwWnXaYb1tY09oyLkXDs4vArpYJzw09nj8MLx5VfciBPGIb+ZwG0ssYnEPJxn/g==}
+  /@types/lodash@4.17.1:
+    resolution: {integrity: sha512-X+2qazGS3jxLAIz5JDXDzglAF3KpijdhFxlf/V1+hEsOUc+HnWi81L/uv/EvGuV90WY+7mPGFCUDGfQC3Gj95Q==}
     dev: true
 
   /@types/minimatch@3.0.5:
