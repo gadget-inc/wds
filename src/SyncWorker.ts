@@ -1,7 +1,7 @@
 // have to use a module import like this so we can re-access imported properties as they might change, see https://github.com/nodejs/node/issues/36531
 import { promises as fs } from "fs";
 import type { MessagePort } from "worker_threads";
-import workerThreads, { MessageChannel, receiveMessageOnPort, Worker } from "worker_threads";
+import workerThreads, { MessageChannel, receiveMessageOnPort, threadId, Worker } from "worker_threads";
 import { log } from "./utils";
 
 log.debug("syncworker file boot", { isMainThread: workerThreads.isMainThread, hasWorkerData: !!workerThreads.workerData });
@@ -52,7 +52,7 @@ export class SyncWorker {
       transferList: [port2],
     });
 
-    log.debug("booted syncworker worker", { filename: __filename, scriptPath, threadId: this.worker.threadId });
+    log.debug("booted syncworker worker", { filename: __filename, scriptPath, childWorkerThreadId: this.worker.threadId });
 
     this.worker.on("error", (error) => {
       log.error("[wds] Internal error", error);
@@ -82,7 +82,7 @@ export class SyncWorker {
 
     const sharedBufferView = new Int32Array(call.sharedBuffer);
 
-    log.debug("calling syncworker", call);
+    log.debug("calling syncworker", { thisThreadId: threadId, childWorkerThreadId: this.worker.threadId, call });
     this.port.postMessage(call);
 
     // synchronously wait for worker thread to get back to us
