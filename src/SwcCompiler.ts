@@ -1,4 +1,5 @@
 import type { Config, Options } from "@swc/core";
+import writeFileAtomic from "write-file-atomic";
 import { transformFile } from "@swc/core";
 import findRoot from "find-root";
 import * as fs from "fs/promises";
@@ -163,7 +164,7 @@ export class SwcCompiler implements Compiler {
 
     const destination = path.join(this.outDir, filename).replace(this.workspaceRoot, "");
     await fs.mkdir(path.dirname(destination), { recursive: true });
-    await fs.writeFile(destination, output.code);
+    await writeFileAtomic(destination, output.code);
     const file = { filename, root, destination, config };
 
     this.compiledFiles.addFile(file);

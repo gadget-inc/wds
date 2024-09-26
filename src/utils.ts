@@ -2,8 +2,9 @@ import { promises as fs } from "fs";
 import { defaults } from "lodash";
 import path from "path";
 import type { ProjectConfig } from "./Options";
+import { threadId } from "worker_threads";
 
-const logPrefix = `[wds pid=${process.pid}]`;
+const logPrefix = `[wds pid=${process.pid} thread=${threadId}]`;
 export const log = {
   debug: (...args: any[]) => process.env["WDS_DEBUG"] && console.warn(logPrefix, ...args),
   info: (...args: any[]) => console.warn(logPrefix, ...args),
