@@ -1,13 +1,28 @@
 import type { Config, Options } from "@swc/core";
-import { transformFile } from "@swc/core";
+import { transform } from "@swc/core";
+import { createRequire } from "node:module";
+import type { XXHashAPI } from "xxhash-wasm";
+import xxhash from "xxhash-wasm";
+
 import findRoot from "find-root";
 import * as fs from "fs/promises";
 import globby from "globby";
+import _ from "lodash";
+import { hasher } from "node-object-hash";
 import path from "path";
+import { fileURLToPath } from "url";
 import writeFileAtomic from "write-file-atomic";
 import type { Compiler } from "./Compiler.js";
 import type { ProjectConfig } from "./Options.js";
 import { log, projectConfig } from "./utils.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const require = createRequire(import.meta.url);
+
+const getPackageVersion = async (packageDir: string) => {
+  const packageJson = JSON.parse(await fs.readFile(path.join(packageDir, "package.json"), "utf-8"));
+  return packageJson.version;
+};
 
 export class MissingDestinationError extends Error {
   ignoredFile: boolean;
@@ -83,9 +98,41 @@ class CompiledFiles {
 export class SwcCompiler implements Compiler {
   private compiledFiles: CompiledFiles;
   private invalidatedFiles: Set<string>;
+  private knownCacheEntries = new Set<string>();
+
+  static async create(workspaceRoot: string, outDir: string) {
+    const compiler = new SwcCompiler(workspaceRoot, outDir);
+    await compiler.initialize();
+    return compiler;
+  }
+
+  /** @private */
   constructor(readonly workspaceRoot: string, readonly outDir: string) {
     this.compiledFiles = new CompiledFiles();
     this.invalidatedFiles = new Set();
+  }
+
+  private xxhash!: XXHashAPI;
+  private cacheEpoch!: string;
+
+  async initialize() {
+    this.xxhash = await xxhash();
+    try {
+      const files = await globby(path.join(this.outDir, "*", "*"), { onlyFiles: true });
+      for (const file of files) {
+        this.knownCacheEntries.add(path.basename(file));
+      }
+    } catch (error) {
+      // no complaints if the cache dir doesn't exist yet
+    }
+
+    // Get package versions for cache keys
+    const [thisPackageVersion, swcCoreVersion] = await Promise.all([
+      getPackageVersion(findRoot(__filename)),
+      getPackageVersion(findRoot(require.resolve("@swc/core"))),
+    ]);
+
+    this.cacheEpoch = `${thisPackageVersion}-${swcCoreVersion}`;
   }
 
   async invalidateBuildSet() {
@@ -148,20 +195,33 @@ export class SwcCompiler implements Compiler {
   }
 
   private async buildFile(filename: string, root: string, config: Config): Promise<CompiledFile> {
-    const output = await transformFile(filename, {
-      cwd: root,
-      filename: filename,
-      root: this.workspaceRoot,
-      rootMode: "root",
-      sourceMaps: "inline",
-      swcrc: false,
-      inlineSourcesContent: true,
-      ...config,
-    });
+    const content = await fs.readFile(filename, "utf8");
 
-    const destination = path.join(this.outDir, filename).replace(this.workspaceRoot, "");
-    await fs.mkdir(path.dirname(destination), { recursive: true });
-    await writeFileAtomic(destination, output.code);
+    const contentHash = this.xxhash.h32ToString(this.cacheEpoch + "///" + filename + "///" + content);
+    const cacheKey = `${path.basename(filename).replace(/[^a-zA-Z0-9]/g, "")}-${contentHash.slice(2)}-${hashConfig(config)}`;
+    const destination = path.join(this.outDir, contentHash.slice(0, 2), cacheKey);
+
+    if (!this.knownCacheEntries.has(cacheKey)) {
+      const options: Options = {
+        cwd: root,
+        filename: filename,
+        root: this.workspaceRoot,
+        rootMode: "root",
+        sourceMaps: "inline",
+        swcrc: false,
+        inlineSourcesContent: true,
+        ...config,
+      };
+
+      const [transformResult, _] = await Promise.all([
+        transform(content, options),
+        fs.mkdir(path.dirname(destination), { recursive: true }),
+      ]);
+
+      await writeFileAtomic(destination, transformResult.code);
+      this.knownCacheEntries.add(cacheKey);
+    }
+
     const file = { filename, root, destination, config };
 
     this.compiledFiles.addFile(file);
@@ -264,3 +324,6 @@ export class SwcCompiler implements Compiler {
     return;
   }
 }
+
+const hashObject = hasher({ sort: true });
+const hashConfig = _.memoize((config: Config) => hashObject.hash(config));
