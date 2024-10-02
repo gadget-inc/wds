@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json.schemastore.org/swcrc",
+  "jsc": {
+    "parser": {
+      "syntax": "typescript",
+      "tsx": true,
+      "decorators": true,
+      "dynamicImport": true
+    },
+    "target": "es2022",
+    "externalHelpers": true
+  },
+  "module": {
+    "type": "commonjs",
+    // turn on lazy imports for maximum reboot performance
+    "lazy": true,
+    // leave dynamic imports as import statements so we can import ESM
+    "ignoreDynamic": true
+  }
+}

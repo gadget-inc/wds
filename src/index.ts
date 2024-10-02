@@ -1,18 +1,23 @@
-import { watch } from "chokidar";
+import chokidar from "chokidar";
 import findRoot from "find-root";
 import findWorkspaceRoot from "find-yarn-workspace-root";
-import { promises as fs } from "fs";
+import fs from "fs-extra";
+import { createRequire } from "node:module";
 import os from "os";
 import path from "path";
 import readline from "readline";
+import { fileURLToPath } from "url";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import type { RunOptions } from "./Options";
-import { Project } from "./Project";
-import { Supervisor } from "./Supervisor";
-import { MissingDestinationError, SwcCompiler } from "./SwcCompiler";
-import { MiniServer } from "./mini-server";
-import { log, projectConfig } from "./utils";
+import type { RunOptions } from "./Options.js";
+import { Project } from "./Project.js";
+import { Supervisor } from "./Supervisor.js";
+import { MissingDestinationError, SwcCompiler } from "./SwcCompiler.js";
+import { MiniServer } from "./mini-server.js";
+import { log, projectConfig } from "./utils.js";
+
+const dirname = fileURLToPath(new URL(".", import.meta.url));
+const require = createRequire(import.meta.url);
 
 export const cli = async () => {
   const args = yargs(hideBin(process.argv))
@@ -60,7 +65,7 @@ const startTerminalCommandListener = (project: Project) => {
 };
 
 const startFilesystemWatcher = (project: Project) => {
-  const watcher = watch([], { ignoreInitial: true });
+  const watcher = chokidar.watch([], { ignoreInitial: true });
 
   project.supervisor.on("message", (value) => {
     if (value.require) {
@@ -126,7 +131,7 @@ const startIPCServer = async (socketPath: string, project: Project) => {
 };
 
 const childProcessArgs = () => {
-  return ["-r", path.join(__dirname, "child-process-registration.js"), "-r", require.resolve("@cspotcode/source-map-support/register")];
+  return ["--import", path.join(dirname, "hooks", "child-process-register.js")];
 };
 
 export const wds = async (options: RunOptions) => {

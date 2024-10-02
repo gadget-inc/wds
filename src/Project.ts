@@ -1,9 +1,9 @@
 import type { FSWatcher } from "chokidar";
-import { compact, debounce } from "lodash";
-import type { Compiler } from "./Compiler";
-import type { ProjectConfig } from "./Options";
-import type { Supervisor } from "./Supervisor";
-import { log } from "./utils";
+import _ from "lodash";
+import type { Compiler } from "./Compiler.js";
+import type { ProjectConfig } from "./Options.js";
+import type { Supervisor } from "./Supervisor.js";
+import { log } from "./utils.js";
 
 interface ReloadBatch {
   paths: string[];
@@ -30,13 +30,13 @@ export class Project {
     this.debouncedReload();
   }
 
-  debouncedReload = debounce(() => {
+  debouncedReload = _.debounce(() => {
     void this.reloadNow();
   }, 15);
 
   async reloadNow() {
     log.info(
-      compact([
+      _.compact([
         this.currentBatch.paths[0].replace(this.workspaceRoot, ""),
         this.currentBatch.paths.length > 1 && ` and ${this.currentBatch.paths.length - 1} others`,
         " changed, ",

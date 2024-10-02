@@ -4,10 +4,10 @@ import findRoot from "find-root";
 import * as fs from "fs/promises";
 import path from "path";
 import type { Readable } from "stream";
-import { log } from "../utils";
-import { json } from "./json";
-import type { ChildProcessResult } from "./protocol";
-import { MARKER } from "./protocol";
+import { log } from "../utils.js";
+import { json } from "./json.js";
+import type { ChildProcessResult } from "./protocol.js";
+import { MARKER } from "./protocol.js";
 
 type ChildProcess = ChildProcessByStdio<null, Readable, null>;
 

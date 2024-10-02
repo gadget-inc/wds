@@ -1,16 +1,13 @@
 import type { Config, Options } from "@swc/core";
-import writeFileAtomic from "write-file-atomic";
 import { transformFile } from "@swc/core";
 import findRoot from "find-root";
 import * as fs from "fs/promises";
 import globby from "globby";
 import path from "path";
-import type { Compiler } from "./Compiler";
-import type { ProjectConfig } from "./Options";
-import { log, projectConfig } from "./utils";
-
-// https://esbuild.github.io/api/#resolve-extensions
-const DefaultExtensions = [".tsx", ".ts", ".jsx", ".mjs", ".cjs", ".js"];
+import writeFileAtomic from "write-file-atomic";
+import type { Compiler } from "./Compiler.js";
+import type { ProjectConfig } from "./Options.js";
+import { log, projectConfig } from "./utils.js";
 
 export class MissingDestinationError extends Error {
   ignoredFile: boolean;
@@ -124,7 +121,7 @@ export class SwcCompiler implements Compiler {
   }
 
   private async getModule(filename: string) {
-    const root = findRoot(filename);
+    const root = findRoot(path.dirname(filename));
     const config = await projectConfig(root);
 
     let swcConfig: Options;
@@ -139,7 +136,7 @@ export class SwcCompiler implements Compiler {
 
     const globs = [...this.fileGlobPatterns(config), ...this.ignoreFileGlobPatterns(config)];
 
-    log.debug("searching for filenames", { config, root, globs });
+    log.debug("searching for filenames", { filename, config, root, globs });
 
     let fileNames = await globby(globs, { cwd: root, absolute: true });
 

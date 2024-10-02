@@ -1,10 +1,23 @@
-// have to use a module import like this so we can re-access imported properties as they might change, see https://github.com/nodejs/node/issues/36531
-import { promises as fs } from "fs";
+import fs from "fs-extra";
+import _ from "lodash";
+import { inspect } from "util";
 import type { MessagePort } from "worker_threads";
-import workerThreads, { MessageChannel, receiveMessageOnPort, threadId, Worker } from "worker_threads";
-import { log } from "./utils";
+import workerThreads, { isMainThread, MessageChannel, receiveMessageOnPort, threadId, Worker } from "worker_threads";
 
-log.debug("syncworker file boot", { isMainThread: workerThreads.isMainThread, hasWorkerData: !!workerThreads.workerData });
+export let debugLog: ((...args: any[]) => void) | undefined = undefined;
+
+if (process.env["WDS_DEBUG"]) {
+  // write logs to a file, not a stdout, since stdio is buffered from worker threads by node and messages are lost on process crash :eyeroll:
+  debugLog = (...args: any[]) => {
+    const result =
+      `[wds syncworker ${isMainThread ? "main" : "inner"} thread=${threadId}] ` +
+      args.map((arg) => (typeof arg === "string" ? arg : inspect(arg))).join(" ");
+
+    console.error(result);
+    fs.appendFileSync(`/tmp/wds-debug-log-pid-${process.pid}-thread-${threadId}.txt`, result + "\n");
+  };
+}
+debugLog?.("syncworker file boot", { isMainThread: workerThreads.isMainThread, hasWorkerData: !!workerThreads.workerData });
 
 interface SyncWorkerCall {
   id: number;
@@ -52,16 +65,16 @@ export class SyncWorker {
       transferList: [port2],
     });
 
-    log.debug("booted syncworker worker", { filename: __filename, scriptPath, childWorkerThreadId: this.worker.threadId });
+    debugLog?.("booted syncworker worker", { filename: __filename, scriptPath, childWorkerThreadId: this.worker.threadId });
 
     this.worker.on("error", (error) => {
-      log.error("[wds] Internal error", error);
+      debugLog?.("Internal error", error);
       process.exit(1);
     });
 
     this.worker.on("exit", (code) => {
       if (code !== 0) {
-        log.error("[wds] Internal error, compiler worked exited unexpectedly");
+        console.error(`Internal error, compiler worker exited unexpectedly with exit code ${code}`);
         process.exit(1);
       }
     });
@@ -82,7 +95,7 @@ export class SyncWorker {
 
     const sharedBufferView = new Int32Array(call.sharedBuffer);
 
-    log.debug("calling syncworker", { thisThreadId: threadId, childWorkerThreadId: this.worker.threadId, call });
+    debugLog?.("calling syncworker", { thisThreadId: threadId, childWorkerThreadId: this.worker.threadId, call });
     this.port.postMessage(call);
 
     // synchronously wait for worker thread to get back to us
@@ -113,38 +126,56 @@ if (!workerThreads.isMainThread) {
     const workerData: SyncWorkerData | undefined = workerThreads.workerData;
     if (!workerData || !workerData.isWDSSyncWorker) return;
 
-    const file = process.env["WDS_DEBUG"] ? await fs.open("/tmp/wds-debug-log.txt", "w") : undefined;
-    const implementation = require(workerData.scriptPath); // eslint-disable-line @typescript-eslint/no-var-requires
-    const port: MessagePort = workerData.port;
+    void debugLog?.("inner sync worker thread booting", { scriptPath: workerData.scriptPath });
 
-    const handleCall = async (call: SyncWorkerCall) => {
-      const sharedBufferView = new Int32Array(call.sharedBuffer);
+    try {
+      let implementation = await import(workerData.scriptPath);
 
-      try {
-        const result = await implementation(...call.args);
-        port.postMessage({ id: call.id, result });
-      } catch (error) {
-        void file?.write(`error running syncworker: ${JSON.stringify(error)}\n`);
-        port.postMessage({ id: call.id, error });
-      }
+      // yes, twice :eyeroll:
+      if (implementation.default) implementation = implementation.default;
+      if (implementation.default) implementation = implementation.default;
 
-      // First, change the shared value. That way if the main thread attempts to wait for us after this point, the wait will fail because the shared value has changed.
-      Atomics.add(sharedBufferView, 0, 1);
-      // Then, wake the main thread. This handles the case where the main thread was already waiting for us before the shared value was changed.
-      Atomics.notify(sharedBufferView, 0, Infinity);
-    };
+      if (!_.isFunction(implementation))
+        throw new Error(
+          `[wds] Internal error: sync worker script at ${workerData.scriptPath} did not export a default function, it was a ${inspect(
+            implementation
+          )}`
+        );
+      const port: MessagePort = workerData.port;
 
-    port.addListener("message", (message) => {
-      void file?.write(`got port message: ${JSON.stringify(message)}\n`);
-      void handleCall(message as SyncWorkerCall);
-    });
+      const handleCall = async (call: SyncWorkerCall) => {
+        const sharedBufferView = new Int32Array(call.sharedBuffer);
 
-    port.addListener("messageerror", (error) => {
-      void file?.write(`got port message error: ${JSON.stringify(error)}\n`);
-      log.error("got port message error", error);
-    });
+        try {
+          const result = await implementation(...call.args);
+          port.postMessage({ id: call.id, result });
+        } catch (error) {
+          void debugLog?.("error running syncworker", error);
+          port.postMessage({ id: call.id, error });
+        }
 
-    void file?.write(`sync worker booted\n`);
+        // First, change the shared value. That way if the main thread attempts to wait for us after this point, the wait will fail because the shared value has changed.
+        Atomics.add(sharedBufferView, 0, 1);
+        // Then, wake the main thread. This handles the case where the main thread was already waiting for us before the shared value was changed.
+        Atomics.notify(sharedBufferView, 0, Infinity);
+      };
+
+      port.addListener("message", (message) => {
+        void debugLog?.("got port message", message);
+        void handleCall(message as SyncWorkerCall);
+      });
+
+      port.addListener("messageerror", (error) => {
+        void debugLog?.("got port message error", error);
+        console.error("got port message error", error);
+      });
+
+      void debugLog?.("sync worker booted\n");
+    } catch (error) {
+      console.error("error booting inner sync worker thread", error);
+      void debugLog?.("error booting inner sync worker thread", error);
+      process.exit(1);
+    }
   };
 
   void runWorker();

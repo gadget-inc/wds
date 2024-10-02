@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 "use strict";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const main = require(".");
+import { cli } from "./index.js";
 
-main.cli(process.argv).catch(function (error) {
+try {
+  await cli(process.argv);
+} catch (error) {
   console.error(`
 ${error.stack || error.message || error}
 `);
   process.exit(1);
-});
+}

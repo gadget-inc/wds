@@ -1,7 +1,8 @@
 {
-  "name": "sourcemap",
+  "name": "cjs-sourcemap",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "commonjs",
   "license": "ISC"
 }

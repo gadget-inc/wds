@@ -23,6 +23,7 @@ wds --inspect some-test.test.ts
 
 - Builds and runs TypeScript really fast using [`swc`](https://github.com/swc-project/swc)
 - Incrementally rebuilds only what has changed in `--watch` mode, restarting the process on file changes
+- Full support for CommonJS and ESM packages (subject to node's own interoperability rules)
 - Execute commands on demand with the `--commands` mode
 - Plays nice with node.js command line flags like `--inspect` or `--prof`
 - Supports node.js `ipc` channels between the process starting `wds` and the node.js process started by `wds`.
@@ -70,7 +71,7 @@ module.exports = {
 
 `swc` is the fastest TypeScript compiler we've found and is the default compiler `wds` uses. `wds` sets up a default `swc` config suitable for compiling to JS for running in Node:
 
-```json
+```jsonc
 {
   "jsc": {
     "parser": {
@@ -116,7 +117,7 @@ module.exports = {
 
 And then, you can use `swc`'s standard syntax for the `.swcrc` file
 
-```json
+```jsonc
 // in .swcrc, these are the defaults wds uses
 {
   "jsc": {

@@ -2,7 +2,7 @@
 "use strict";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { benchBoot, benchReload } from "./bench/bench";
+import { benchBoot, benchReload } from "./bench/bench.js";
 
 export const cli = async () => {
   const args = yargs(hideBin(process.argv))
