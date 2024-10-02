@@ -60,7 +60,7 @@
     "@types/lodash": "^4.14.194",
     "@types/node": "^22.7.4",
     "@types/write-file-atomic": "^4.0.3",
-    "@types/yargs": "^15.0.14",
+    "@types/yargs": "^15.0.19",
     "eslint": "^8.57.1",
     "gitpkg": "github:airhorns/gitpkg#gitpkg-v1.0.0-beta.4-gitpkg-82083c3",
     "prettier": "^2.8.8",

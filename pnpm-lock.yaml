@@ -65,8 +65,8 @@ devDependencies:
     specifier: ^4.0.3
     version: 4.0.3
   '@types/yargs':
-    specifier: ^15.0.14
-    version: 15.0.14
+    specifier: ^15.0.19
+    version: 15.0.19
   eslint:
     specifier: ^8.57.1
     version: 8.57.1
@@ -905,8 +905,8 @@ packages:
     resolution: {integrity: sha512-37RSHht+gzzgYeobbG+KWryeAW8J33Nhr69cjTqSYymXVZEN9NbRYWoYlRtDhHKPVT1FyNKwaTPC1NynKZpzRA==}
     dev: true
 
-  /@types/yargs@15.0.14:
-    resolution: {integrity: sha512-yEJzHoxf6SyQGhBhIYGXQDSCkJjB6HohDShto7m8vaKg9Yp0Yn8+71J9eakh2bnPg6BfsH9PRMhiRTZnd4eXGQ==}
+  /@types/yargs@15.0.19:
+    resolution: {integrity: sha512-2XUaGVmyQjgyAZldf0D0c14vvo/yv0MhQBSTJcejMMaitsn3nxCB6TmH4G0ZQf+uxROOa9mpanoSm8h6SG/1ZA==}
     dependencies:
       '@types/yargs-parser': 20.2.0
     dev: true
