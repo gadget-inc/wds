@@ -48,8 +48,6 @@ if (!workerData || !(workerData as SyncWorkerData).isWDSSyncWorker) {
     };
   }
 
-  require.cache ??= {};
-
   // monitor the parent process' health, if it dies, kill ourselves so we don't end up a zombie
   const monitor = setInterval(() => {
     try {
