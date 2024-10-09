@@ -65,7 +65,7 @@
     "gitpkg": "github:airhorns/gitpkg#gitpkg-v1.0.0-beta.4-gitpkg-82083c3",
     "prettier": "^2.8.8",
     "typescript": "^5.6.2",
-    "vitest": "^2.1.1",
+    "vitest": "^2.1.2",
     "zx": "^7.2.3"
   },
   "packageManager": "pnpm@8.12.0+sha256.553e4eb0e2a2c9abcb419b3262bdc7aee8ae3c42e2301a1807d44575786160c9"
