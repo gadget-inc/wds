@@ -15,7 +15,7 @@ const extensions = process.env["WDS_EXTENSIONS"]!.split(",");
 const builtin = new Set(builtinModules);
 
 const esmResolver = new ResolverFactory({
-  conditionNames: ["import"],
+  conditionNames: ["node", "import"],
   extensions,
   extensionAlias: {
     ".js": [".js", ".ts"],
