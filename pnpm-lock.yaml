@@ -50,8 +50,8 @@ devDependencies:
     specifier: ^0.4.0
     version: 0.4.0(prettier@2.8.8)(typescript@5.6.2)
   '@types/find-root':
-    specifier: ^1.1.2
-    version: 1.1.2
+    specifier: ^1.1.4
+    version: 1.1.4
   '@types/fs-extra':
     specifier: ^11.0.4
     version: 11.0.4
@@ -838,8 +838,8 @@ packages:
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
     dev: true
 
-  /@types/find-root@1.1.2:
-    resolution: {integrity: sha512-lGuMq71TL466jtCpvh7orGd+mrdBmo2h8ozvtOOTbq3ByfWpuN+UVxv4sOv3YpsD4NhW2k6ESGhnT/FIg4Ouzw==}
+  /@types/find-root@1.1.4:
+    resolution: {integrity: sha512-2EXK/+gVhVgtt4JqThbEncORvpYJKzi9tQGmI3EkU2jTgMzQsrPm/hbd5xe5uPdeFzIW5gh2PRvvPjaUsI8vpg==}
     dev: true
 
   /@types/fs-extra@11.0.4:

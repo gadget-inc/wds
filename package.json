@@ -55,7 +55,7 @@
   "devDependencies": {
     "@gadgetinc/eslint-config": "^0.6.1",
     "@gadgetinc/prettier-config": "^0.4.0",
-    "@types/find-root": "^1.1.2",
+    "@types/find-root": "^1.1.4",
     "@types/fs-extra": "^11.0.4",
     "@types/lodash": "^4.17.9",
     "@types/node": "^22.7.5",
