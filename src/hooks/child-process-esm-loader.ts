@@ -1,17 +1,18 @@
 /**
  * Loader file registered as an ESM module loader
  */
-import fs from "fs/promises";
+import fs from "node:fs/promises";
 import type { LoadHook, ModuleFormat, ResolveHook } from "node:module";
-import { dirname, extname, resolve as resolvePath } from "node:path";
-import { fileURLToPath } from "node:url";
+import { builtinModules, createRequire } from "node:module";
+import { dirname, extname, join, resolve as resolvePath } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { ResolverFactory } from "oxc-resolver";
 import { debugLog } from "../SyncWorker.cjs";
 import { compileInLeaderProcess } from "./compileInLeaderProcess.cjs";
 import { notifyParentProcessOfRequire } from "./utils.cjs";
 
 const extensions = process.env["WDS_EXTENSIONS"]!.split(",");
-const wdsProtocol = "file://";
+const builtin = new Set(builtinModules);
 
 const esmResolver = new ResolverFactory({
   conditionNames: ["import"],
@@ -27,47 +28,103 @@ const esmResolver = new ResolverFactory({
 });
 
 // export a custom require hook that resolves .js imports to .ts files
-export const resolve: ResolveHook = function resolve(specifier, context, nextResolve) {
+export const resolve: ResolveHook = async function resolve(specifier, context, nextResolve) {
+  // import fs from "node:fs"
   if (specifier.startsWith("node:")) {
-    return nextResolve(specifier, context);
+    return {
+      url: specifier,
+      format: "builtin",
+      shortCircuit: true,
+    };
   }
 
+  // import fs from "fs"
+  if (builtin.has(specifier)) {
+    return {
+      url: `node:${specifier}`,
+      format: "builtin",
+      shortCircuit: true,
+    };
+  }
+
+  // import from data URLs
+  if (specifier.startsWith("data:")) {
+    return {
+      url: specifier,
+      shortCircuit: true,
+    };
+  }
+
+  // import attributes present which we're just gonna assume import json, don't touch em
+  if (context.importAttributes?.type) {
+    return {
+      ...(await nextResolve(specifier)),
+      shortCircuit: true,
+    };
+  }
+
+  // if there's no parentURL, we're resolving an absolute path or an entrypoint. resolve relative to cwd
   let parentURL: string;
   if (context.parentURL) {
-    if (extname(context.parentURL)) {
-      parentURL = dirname(fileURLToPath(context.parentURL));
-    } else {
-      parentURL = fileURLToPath(context.parentURL);
-    }
+    // strip the filename from the parentURL to get the dir to resolve relative to
+    parentURL = join(fileURLToPath(context.parentURL), "..");
   } else {
     parentURL = process.cwd();
-  }
-  if (specifier.startsWith("file://")) {
-    specifier = specifier.slice(7);
   }
 
   debugLog?.("esm resolver running", { specifier, context, parentURL });
 
-  const resolved = esmResolver.sync(parentURL, specifier);
+  const resolved = await esmResolver.async(parentURL, specifier.startsWith("file:") ? fileURLToPath(specifier) : specifier);
   debugLog?.("esm resolve result", { specifier, parentURL, resolved });
 
   if (resolved.error) {
     debugLog?.("esm custom resolver error", { specifier, parentURL, resolved, error: resolved.error });
+    throw new Error(`${resolved.error}: ${specifier} cannot be resolved in ${context.parentURL}`);
   }
 
-  if (resolved.error || !resolved.path) return nextResolve(specifier, context);
-  const targetPath = resolved.path;
+  if (resolved.path) {
+    // we were able to resolve with our custom resolver
+    const targetPath = resolved.path;
 
-  // if the resolved path points to a file that is not one of our compiled extensions, let the node default take over
-  if (!extensions.some((ext) => targetPath.endsWith(ext))) {
-    return nextResolve(specifier, context);
+    // we resolved to a path that needs compilation, return the specifier with the wds protocol
+    if (extensions.some((ext) => targetPath.endsWith(ext))) {
+      const url = new URL(join("file://", targetPath));
+      url.search = "wds=true";
+
+      return {
+        format: resolved.moduleType as any,
+        url: url.toString(),
+        shortCircuit: true,
+      };
+    }
   }
 
-  return {
-    format: resolved.moduleType as any,
-    url: wdsProtocol + resolved.path,
-    shortCircuit: true,
-  };
+  // we weren't able to resolve with our custom resolver, fallback to node's default resolver
+  try {
+    const res = await nextResolve(specifier);
+    debugLog?.("esm: resolved with node fallback resolver", { specifier, url: res.url, format: res.format });
+    return {
+      ...res,
+      shortCircuit: true,
+    };
+  } catch (resolveError) {
+    // fallback to cjs resolver, as the specifier may point to non-esm files that can be required
+    // stolen from https://github.com/swc-project/swc-node/blob/6f162b495fb1414c16d3d30b61dcfcce6afbb260/packages/register/esm.mts#L209
+    try {
+      const resolution = pathToFileURL(createRequire(process.cwd()).resolve(specifier)).toString();
+
+      debugLog?.("esm: resolved with commonjs require fallback", { specifier, resolution });
+
+      return {
+        format: "commonjs",
+        url: resolution,
+        shortCircuit: true,
+      };
+    } catch (error) {
+      debugLog?.("esm: commonjs require fallback error", { specifier, error });
+      throw resolveError;
+    }
+  }
 };
 
 const paths: Record<
@@ -78,7 +135,7 @@ const paths: Record<
     }
 > = {};
 
-// Compile a given file by sending it into our async-to-sync wrapper worker js file
+// Compile a given file by sending it to the leader process
 // The leader process returns us a list of all the files it just compiled, so that we don't have to pay the IPC boundary cost for each file after this one
 // So, we keep a map of all the files it's compiled so far, and check it first.
 const compileOffThread = async (filename: string): Promise<string | { ignored: boolean }> => {
@@ -99,19 +156,20 @@ const compileOffThread = async (filename: string): Promise<string | { ignored: b
 };
 
 export const load: LoadHook = async function load(url, context, nextLoad) {
-  if (!url.startsWith(wdsProtocol)) {
+  if (!url.endsWith("wds=true")) {
     return await nextLoad(url, context);
   }
+  url = url.slice(0, -9);
   if (!extensions.some((ext) => url.endsWith(ext))) {
     return await nextLoad(url, context);
   }
 
-  const format: ModuleFormat = context.format ?? (await getPackageType(url.replace(wdsProtocol, "file://"))) ?? "commonjs";
+  const format: ModuleFormat = context.format ?? (await getPackageType(url)) ?? "commonjs";
   if (format == "commonjs") {
     // if the package is a commonjs package and we return the source contents explicitly, this loader will process the inner requires, but with a broken/different version of \`require\` internally.
     // if we return a nullish source, node falls back to the old, mainline require chain, which has require.cache set properly and whatnot.
     // see https://nodejs.org/docs/latest-v22.x/api/module.html#loadurl-context-nextload under "Omitting vs providing a source for 'commonjs' has very different effects:"
-    debugLog?.("esm loader falling back to node builtin commons", { url, format });
+    debugLog?.("esm loader falling back to node builtin commonjs loader", { url, format });
 
     return {
       format,
@@ -119,11 +177,10 @@ export const load: LoadHook = async function load(url, context, nextLoad) {
     };
   }
 
-  const sourceFileName = url.slice(wdsProtocol.length);
-
+  const sourceFileName = url.startsWith("file:") ? fileURLToPath(url) : url;
   const targetFileName = await compileOffThread(sourceFileName);
   if (typeof targetFileName !== "string") {
-    throw new Error(`WDS ESM loader failed because the filename ${sourceFileName} is ignored but still being required.`);
+    throw new Error(`WDS ESM loader failed because the filename ${sourceFileName} is ignored but still being imported.`);
   }
 
   notifyParentProcessOfRequire(sourceFileName);
