@@ -12,4 +12,5 @@ export interface ProjectConfig {
   ignore: string[];
   swc?: SwcConfig;
   extensions: string[];
+  cacheDir: string;
 }

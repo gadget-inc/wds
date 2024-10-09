@@ -23,12 +23,17 @@ export async function time<T>(run: () => Promise<T>) {
 
 export const projectConfig = async (root: string): Promise<ProjectConfig> => {
   const location = path.join(root, "wds.js");
-  const value = { ignore: [], extensions: [".ts", ".tsx", ".jsx"] };
+  const base: ProjectConfig = {
+    ignore: [],
+    extensions: [".ts", ".tsx", ".jsx"],
+    cacheDir: path.join(root, "node_modules/.cache/wds"),
+  };
+
   try {
     await fs.access(location);
   } catch (error: any) {
     log.debug(`Not loading project config from ${location}`);
-    return value;
+    return base;
   }
 
   let required = await import(location);
@@ -36,5 +41,12 @@ export const projectConfig = async (root: string): Promise<ProjectConfig> => {
     required = required.default;
   }
   log.debug(`Loaded project config from ${location}`);
-  return _.defaults(required, value);
+  const result = _.defaults(required, base);
+
+  // absolutize the cacheDir if not already
+  if (!result.cacheDir.startsWith("/")) {
+    result.cacheDir = path.resolve(path.dirname(location), result.cacheDir);
+  }
+
+  return result;
 };

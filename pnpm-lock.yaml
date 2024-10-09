@@ -29,6 +29,9 @@ dependencies:
   lodash:
     specifier: ^4.17.20
     version: 4.17.21
+  node-object-hash:
+    specifier: ^3.0.0
+    version: 3.0.0
   oxc-resolver:
     specifier: ^1.12.0
     version: 1.12.0
@@ -38,6 +41,9 @@ dependencies:
   write-file-atomic:
     specifier: ^6.0.0
     version: 6.0.0
+  xxhash-wasm:
+    specifier: ^1.0.2
+    version: 1.0.2
   yargs:
     specifier: ^16.2.0
     version: 16.2.0
@@ -2710,6 +2716,11 @@ packages:
       formdata-polyfill: 4.0.10
     dev: true
 
+  /node-object-hash@3.0.0:
+    resolution: {integrity: sha512-jLF6tlyletktvSAawuPmH1SReP0YfZQ+tBrDiTCK+Ai7eXPMS9odi5xW/iKC7ZhrWJJ0Z5xYcW/x+1fVMn1Qvw==}
+    engines: {node: '>=16', pnpm: '>=8'}
+    dev: false
+
   /normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
@@ -3673,6 +3684,10 @@ packages:
     dependencies:
       imurmurhash: 0.1.4
       signal-exit: 4.1.0
+    dev: false
+
+  /xxhash-wasm@1.0.2:
+    resolution: {integrity: sha512-ibF0Or+FivM9lNrg+HGJfVX8WJqgo+kCLDc4vx6xMeTce7Aj+DLttKbxxRR/gNLSAelRc1omAPlJ77N/Jem07A==}
     dev: false
 
   /y18n@5.0.5:

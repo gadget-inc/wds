@@ -13,7 +13,7 @@ const compile = async (filename: string, root = "fixtures/src") => {
   const rootDir = path.join(dirname, root);
   const fullPath = path.join(rootDir, filename);
 
-  const compiler = new SwcCompiler(rootDir, workDir);
+  const compiler = await SwcCompiler.create(rootDir, workDir);
   await compiler.compile(fullPath);
   const compiledFilePath = (await compiler.fileGroup(fullPath))[fullPath]!;
 
@@ -58,7 +58,7 @@ test("logs error when a file in group fails compilation but continues", async ()
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "wds-test"));
   const rootDir = path.join(dirname, "fixtures/failing");
   const fullPath = path.join(rootDir, "successful.ts");
-  const compiler = new SwcCompiler(rootDir, workDir);
+  const compiler = await SwcCompiler.create(rootDir, workDir);
   await compiler.compile(fullPath);
   const group = await compiler.fileGroup(fullPath);
 
