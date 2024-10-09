@@ -1,12 +1,11 @@
-import chokidar from "chokidar";
 import findRoot from "find-root";
 import findWorkspaceRoot from "find-yarn-workspace-root";
 import fs from "fs-extra";
-import { createRequire } from "node:module";
 import os from "os";
 import path from "path";
 import readline from "readline";
 import { fileURLToPath } from "url";
+import Watcher from "watcher";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import type { RunOptions } from "./Options.js";
@@ -17,7 +16,6 @@ import { MiniServer } from "./mini-server.js";
 import { log, projectConfig } from "./utils.js";
 
 const dirname = fileURLToPath(new URL(".", import.meta.url));
-const require = createRequire(import.meta.url);
 
 export const cli = async () => {
   const args = yargs(hideBin(process.argv))
@@ -65,12 +63,27 @@ const startTerminalCommandListener = (project: Project) => {
 };
 
 const startFilesystemWatcher = (project: Project) => {
-  const watcher = chokidar.watch([], { ignoreInitial: true });
+  const watcher = new Watcher([project.workspaceRoot], {
+    ignoreInitial: true,
+    recursive: true,
+    ignore: ((filePath: string) => {
+      if (filePath.includes("node_modules")) return true;
+      if (filePath.endsWith(".d.ts")) return true;
+      if (filePath.endsWith(".map")) return true;
+      if (filePath.endsWith(".git")) return true;
+      if (filePath.endsWith(".DS_Store")) return true;
+      if (filePath.endsWith(".tsbuildinfo")) return true;
+
+      return project.config.ignore?.some((ignore) => filePath.startsWith(ignore)) ?? false;
+    }) as any,
+  });
+
+  log.debug("started watcher", { root: project.workspaceRoot });
 
   project.supervisor.on("message", (value) => {
     if (value.require) {
       if (!value.require.includes("node_modules")) {
-        watcher.add(value.require);
+        project.watchFile(value.require);
       }
     }
   });
@@ -84,7 +97,6 @@ const startFilesystemWatcher = (project: Project) => {
   watcher.on("unlink", invalidateAndReload);
   watcher.on("unlinkDir", invalidateAndReload);
 
-  project.watcher = watcher;
   project.addShutdownCleanup(() => void watcher.close());
 
   return watcher;
@@ -94,7 +106,7 @@ const startIPCServer = async (socketPath: string, project: Project) => {
   const compile = async (filename: string) => {
     try {
       await project.compiler.compile(filename);
-      project.watcher?.add(filename);
+      project.watched.insert(filename);
       return await project.compiler.fileGroup(filename);
     } catch (error) {
       log.error(`Error compiling file ${filename}:`, error);
@@ -116,7 +128,7 @@ const startIPCServer = async (socketPath: string, project: Project) => {
     },
     "/file-required": (request, reply) => {
       for (const filename of request.json()) {
-        project.watcher?.add(filename);
+        project.watchFile(filename);
       }
       reply.json({ status: "ok" });
     },

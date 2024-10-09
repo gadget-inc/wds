@@ -1,7 +1,7 @@
-import type { FSWatcher } from "chokidar";
 import _ from "lodash";
 import type { Compiler } from "./Compiler.js";
 import type { ProjectConfig } from "./Options.js";
+import { PathTrie } from "./PathTrie.js";
 import type { Supervisor } from "./Supervisor.js";
 import { log } from "./utils.js";
 
@@ -15,7 +15,7 @@ export class Project {
   cleanups: (() => void)[] = [];
   currentBatch: ReloadBatch = { paths: [], invalidate: false };
   supervisor!: Supervisor;
-  watcher?: FSWatcher;
+  watched = new PathTrie();
 
   constructor(readonly workspaceRoot: string, readonly config: ProjectConfig, readonly compiler: Compiler) {}
 
@@ -24,10 +24,13 @@ export class Project {
   }
 
   enqueueReload(path: string, requiresInvalidation = false) {
-    this.compiler.invalidate(path);
-    this.currentBatch.paths.push(path);
-    this.currentBatch.invalidate = this.currentBatch.invalidate || requiresInvalidation;
-    this.debouncedReload();
+    log.debug({ path }, "watch event");
+    if (this.watched.contains(path)) {
+      this.compiler.invalidate(path);
+      this.currentBatch.paths.push(path);
+      this.currentBatch.invalidate = this.currentBatch.invalidate || requiresInvalidation;
+      this.debouncedReload();
+    }
   }
 
   debouncedReload = _.debounce(() => {
@@ -64,5 +67,9 @@ export class Project {
       cleanup();
     }
     process.exit(code);
+  }
+
+  watchFile(path: string) {
+    this.watched.insert(path);
   }
 }
