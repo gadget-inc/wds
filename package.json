@@ -39,7 +39,7 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@swc/core": "^1.7.28",
+    "@swc/core": "^1.7.35",
     "@swc/helpers": "^0.5.13",
     "find-root": "^1.1.0",
     "find-yarn-workspace-root": "^2.0.0",
