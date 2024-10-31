@@ -56,8 +56,8 @@ devDependencies:
     specifier: ^11.0.4
     version: 11.0.4
   '@types/lodash':
-    specifier: ^4.17.12
-    version: 4.17.12
+    specifier: ^4.17.13
+    version: 4.17.13
   '@types/node':
     specifier: ^22.8.4
     version: 22.8.4
@@ -863,8 +863,8 @@ packages:
       '@types/node': 22.8.4
     dev: true
 
-  /@types/lodash@4.17.12:
-    resolution: {integrity: sha512-sviUmCE8AYdaF/KIHLDJBQgeYzPBI0vf/17NaYehBJfYD1j6/L95Slh07NlyK2iNyBNaEkb3En2jRt+a8y3xZQ==}
+  /@types/lodash@4.17.13:
+    resolution: {integrity: sha512-lfx+dftrEZcdBPczf9d0Qv0x+j/rfNCMuC6OcfXmO8gkfeNAY88PgKUbvG56whcN23gc27yenwF6oJZXGFpYxg==}
     dev: true
 
   /@types/minimist@1.2.5:
