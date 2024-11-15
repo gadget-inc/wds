@@ -11,5 +11,7 @@ export interface RunOptions {
 export interface ProjectConfig {
   ignore: string[];
   swc?: SwcConfig;
+  esm?: boolean;
   extensions: string[];
+  cacheDir: string;
 }

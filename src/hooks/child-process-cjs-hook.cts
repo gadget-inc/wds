@@ -15,6 +15,9 @@ if (!workerData || !(workerData as SyncWorkerData).isWDSSyncWorker) {
       }
   > = {};
 
+  // enable source maps
+  process.setSourceMapsEnabled(true);
+
   // Compile a given file by sending it into our async-to-sync wrapper worker js file
   // The leader process returns us a list of all the files it just compiled, so that we don't have to pay the IPC boundary cost for each file after this one
   // So, we keep a map of all the files it's compiled so far, and check it first.
@@ -37,7 +40,9 @@ if (!workerData || !(workerData as SyncWorkerData).isWDSSyncWorker) {
 
   // Register our compiler for typescript files.
   // We don't do the best practice of chaining module._compile calls because esbuild won't know about any of the stuff any of the other extensions might do, so running them wouldn't do anything. wds must then be the first registered extension.
-  for (const extension of process.env["WDS_EXTENSIONS"]!.split(",")) {
+  const extensions = process.env["WDS_EXTENSIONS"]!.split(",");
+  log.debug("registering cjs hook for extensions", extensions);
+  for (const extension of extensions) {
     require.extensions[extension] = (module: any, filename: string) => {
       const compiledFilename = compileOffThread(filename);
       if (typeof compiledFilename === "string") {

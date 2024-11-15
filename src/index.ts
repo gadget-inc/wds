@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 import Watcher from "watcher";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import type { RunOptions } from "./Options.js";
+import type { ProjectConfig, RunOptions } from "./Options.js";
 import { Project } from "./Project.js";
 import { Supervisor } from "./Supervisor.js";
 import { MissingDestinationError, SwcCompiler } from "./SwcCompiler.js";
@@ -142,14 +142,28 @@ const startIPCServer = async (socketPath: string, project: Project) => {
   return server;
 };
 
-const childProcessArgs = () => {
-  return ["--import", path.join(dirname, "hooks", "child-process-register.js")];
+const childProcessArgs = (config: ProjectConfig) => {
+  const args = ["--require", path.join(dirname, "hooks", "child-process-cjs-hook.cjs")];
+  if (config.esm) {
+    args.push("--import", path.join(dirname, "hooks", "child-process-esm-hook.js"));
+  }
+  return args;
 };
 
 export const wds = async (options: RunOptions) => {
-  const workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
+  let workspaceRoot: string;
+  let projectRoot: string;
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "wds"));
-  log.debug(`starting wds for workspace root ${workspaceRoot} and workdir ${workDir}`);
+
+  const firstNonOptionArg = options.argv.find((arg) => !arg.startsWith("-"));
+  if (firstNonOptionArg && fs.existsSync(firstNonOptionArg)) {
+    const absolutePath = path.resolve(firstNonOptionArg);
+    projectRoot = findRoot(path.dirname(absolutePath));
+    workspaceRoot = findWorkspaceRoot(projectRoot) || projectRoot;
+  } else {
+    projectRoot = findRoot(process.cwd());
+    workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
+  }
 
   let serverSocketPath: string;
   if (os.platform() === "win32") {
@@ -158,10 +172,13 @@ export const wds = async (options: RunOptions) => {
     serverSocketPath = path.join(workDir, "ipc.sock");
   }
 
-  const compiler = new SwcCompiler(workspaceRoot, workDir);
+  const config = await projectConfig(projectRoot);
+  log.debug(`starting wds for workspace root ${workspaceRoot} and workdir ${workDir}`, config);
 
-  const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())), compiler);
-  project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
+  const compiler = await SwcCompiler.create(workspaceRoot, config.cacheDir);
+  const project = new Project(workspaceRoot, config, compiler);
+
+  project.supervisor = new Supervisor([...childProcessArgs(config), ...options.argv], serverSocketPath, options, project);
 
   if (options.reloadOnChanges) startFilesystemWatcher(project);
   if (options.terminalCommands) startTerminalCommandListener(project);
