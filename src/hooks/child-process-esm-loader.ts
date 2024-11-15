@@ -75,7 +75,7 @@ export const resolve: ResolveHook = async function resolve(specifier, context, n
   debugLog?.("esm resolver running", { specifier, context, parentURL });
 
   const resolved = await esmResolver.async(parentURL, specifier.startsWith("file:") ? fileURLToPath(specifier) : specifier);
-  debugLog?.("esm resolve result", { specifier, parentURL, resolved });
+  debugLog?.("oxc resolver result", { specifier, parentURL, resolved });
 
   if (resolved.error) {
     debugLog?.("esm custom resolver error", { specifier, parentURL, resolved, error: resolved.error });
@@ -111,6 +111,8 @@ export const resolve: ResolveHook = async function resolve(specifier, context, n
     // fallback to cjs resolver, as the specifier may point to non-esm files that can be required
     // stolen from https://github.com/swc-project/swc-node/blob/6f162b495fb1414c16d3d30b61dcfcce6afbb260/packages/register/esm.mts#L209
     try {
+      debugLog?.("oxc and node backup resolve error", { resolveError: (resolveError as Error).message });
+
       const resolution = pathToFileURL(createRequire(process.cwd()).resolve(specifier)).toString();
 
       debugLog?.("esm: resolved with commonjs require fallback", { specifier, resolution });
