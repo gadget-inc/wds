@@ -158,9 +158,10 @@ export const wds = async (options: RunOptions) => {
     serverSocketPath = path.join(workDir, "ipc.sock");
   }
 
-  const compiler = new SwcCompiler(workspaceRoot, workDir);
+  const config = await projectConfig(findRoot(process.cwd()));
+  const compiler = await SwcCompiler.create(workspaceRoot, config.cacheDir);
+  const project = new Project(workspaceRoot, config, compiler);
 
-  const project = new Project(workspaceRoot, await projectConfig(findRoot(process.cwd())), compiler);
   project.supervisor = new Supervisor([...childProcessArgs(), ...options.argv], serverSocketPath, options, project);
 
   if (options.reloadOnChanges) startFilesystemWatcher(project);
