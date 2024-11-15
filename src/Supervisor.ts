@@ -66,6 +66,7 @@ export class Supervisor extends EventEmitter {
         ...process.env,
         WDS_SOCKET_PATH: this.socketPath,
         WDS_EXTENSIONS: this.project.config.extensions.join(","),
+        WDS_ESM_ENABLED: this.project.config.esm ? "true" : "false",
       },
       stdio: stdio,
       detached: true,

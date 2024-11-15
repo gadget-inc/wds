@@ -13,8 +13,8 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup-test-env
       - run: pnpm build
-      - run: pnpm zx integration-test/test.js
       - run: pnpm test
+      - run: pnpm integration-test
 
   lint:
     runs-on: ubuntu-latest

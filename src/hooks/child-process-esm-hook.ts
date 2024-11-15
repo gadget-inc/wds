@@ -2,6 +2,7 @@
  * Entrypoint file passed as --import to all child processes started by wds
  */
 import { register } from "node:module";
+import { log } from "./utils.cjs";
 
 if (!register) {
   throw new Error(
@@ -9,11 +10,8 @@ if (!register) {
   );
 }
 
-// enable source maps
-process.setSourceMapsEnabled(true);
-
 // register the CJS hook to intercept require calls the old way
-import "./child-process-cjs-hook.cjs";
 
+log.debug("registering wds ESM loader");
 // register the ESM loader the new way
 register("./child-process-esm-loader.js", import.meta.url);

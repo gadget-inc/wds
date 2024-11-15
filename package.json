@@ -33,6 +33,7 @@
     "lint:fix": "NODE_OPTIONS=\"--max-old-space-size=4096\" prettier --write --check \"src/**/*.{js,ts,tsx}\" && eslint --ext ts,tsx --fix src",
     "prerelease": "gitpkg publish",
     "test": "vitest run",
+    "integration-test": "pnpm run build && zx integration-test/test.js",
     "test:watch": "vitest"
   },
   "engines": {

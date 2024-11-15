@@ -27,6 +27,7 @@ export const projectConfig = async (root: string): Promise<ProjectConfig> => {
     ignore: [],
     extensions: [".ts", ".tsx", ".jsx"],
     cacheDir: path.join(root, "node_modules/.cache/wds"),
+    esm: true,
   };
 
   try {
