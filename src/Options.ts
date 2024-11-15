@@ -1,6 +1,6 @@
 import type { Options as SwcOptions } from "@swc/core";
 
-type SwcConfig = ".swcrc" | SwcOptions;
+export type SwcConfig = string | SwcOptions;
 
 export interface RunOptions {
   argv: string[];
