@@ -1,10 +1,10 @@
 import type { Config, Options } from "@swc/core";
-import writeFileAtomic from "write-file-atomic";
 import { transformFile } from "@swc/core";
 import findRoot from "find-root";
 import * as fs from "fs/promises";
 import globby from "globby";
 import path from "path";
+import writeFileAtomic from "write-file-atomic";
 import type { Compiler } from "./Compiler";
 import type { ProjectConfig } from "./Options";
 import { log, projectConfig } from "./utils";
@@ -129,8 +129,11 @@ export class SwcCompiler implements Compiler {
 
     let swcConfig: Options;
 
-    if (!config.swc || config.swc === ".swcrc") {
-      swcConfig = { swcrc: true };
+    if (!config.swc || typeof config.swc === "string") {
+      swcConfig = {
+        swcrc: true,
+        configFile: config.swc && config.swc !== ".swcrc" ? path.resolve(root, config.swc) : undefined,
+      };
     } else if (config.swc === undefined) {
       swcConfig = SWC_DEFAULTS;
     } else {
