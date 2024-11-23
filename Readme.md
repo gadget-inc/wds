@@ -1,6 +1,6 @@
 # wds
 
-A reloading dev server for server side TypeScript projects. Compiles TypeScript _real_ fast, on demand, using `require.extensions`. Similar to and inspired by `ts-node-dev`.
+A reloading dev server for server side TypeScript projects. Compiles TypeScript _real_ fast, on demand, using ESM loaders and `require.extensions`. Similar to and inspired by `ts-node-dev` and `tsx`.
 
 wds stands for Whirlwind (or web) Development Server.
 
