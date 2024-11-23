@@ -4,7 +4,7 @@
 import fs from "node:fs/promises";
 import type { LoadHook, ModuleFormat, ResolveHook } from "node:module";
 import { builtinModules, createRequire } from "node:module";
-import { dirname, extname, join, resolve as resolvePath } from "node:path";
+import { dirname, join, resolve as resolvePath } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { ResolverFactory } from "oxc-resolver";
 import { debugLog } from "../SyncWorker.cjs";
@@ -166,7 +166,7 @@ export const load: LoadHook = async function load(url, context, nextLoad) {
     return await nextLoad(url, context);
   }
 
-  const format: ModuleFormat = context.format ?? (await getPackageType(url)) ?? "commonjs";
+  const format: ModuleFormat = context.format ?? (await getPackageType(fileURLToPath(url))) ?? "commonjs";
   if (format == "commonjs") {
     // if the package is a commonjs package and we return the source contents explicitly, this loader will process the inner requires, but with a broken/different version of \`require\` internally.
     // if we return a nullish source, node falls back to the old, mainline require chain, which has require.cache set properly and whatnot.
@@ -197,30 +197,43 @@ export const load: LoadHook = async function load(url, context, nextLoad) {
   };
 };
 
-async function getPackageType(url: string): Promise<ModuleFormat | undefined> {
-  // `url` is only a file path during the first iteration when passed the resolved url from the load() hook
-  // an actual file path from load() will contain a file extension as it's required by the spec
-  // this simple truthy check for whether `url` contains a file extension will work for most projects but does not cover some edge-cases (such as extensionless files or a url ending in a trailing space)  extensionless files or a url ending in a trailing space)
-  const isFilePath = !!extname(url);
+async function getPackageType(path: string, isFilePath?: boolean): Promise<ModuleFormat | undefined> {
+  try {
+    isFilePath ??= await fs.readdir(path).then(() => false);
+  } catch (err: any) {
+    if (err?.code !== "ENOTDIR") {
+      throw err;
+    }
+    isFilePath = true;
+  }
+
   // If it is a file path, get the directory it's in
-  const dir = isFilePath ? dirname(fileURLToPath(url)) : url;
+  const dir = isFilePath ? dirname(path) : path;
   // Compose a file path to a package.json in the same directory,
   // which may or may not exist
   const packagePath = resolvePath(dir, "package.json");
-  debugLog?.("getPackageType", { url, packagePath });
+  debugLog?.("getPackageType", { path, packagePath });
 
   // Try to read the possibly nonexistent package.json
   const type = await fs
     .readFile(packagePath, { encoding: "utf8" })
-    .then((filestring) => JSON.parse(filestring).type)
+    .then((filestring) => {
+      // As per node's docs, we use the nearest package.json to figure out the package type (see https://nodejs.org/api/packages.html#type)
+      // If it lacks a "type" key, we assume "commonjs". If we fail to parse, we also choose to assume "commonjs".
+      try {
+        return JSON.parse(filestring).type || "commonjs";
+      } catch (_err) {
+        return "commonjs";
+      }
+    })
     .catch((err) => {
       if (err?.code !== "ENOENT") console.error(err);
     });
-  // If package.json existed and contained a `type` field with a value, voilà
+  // If package.json existed, we guarantee a type and return it.
   if (type) return type;
   // Otherwise, (if not at the root) continue checking the next directory up
   // If at the root, stop and return false
-  if (dir.length > 1) return await getPackageType(resolvePath(dir, ".."));
+  if (dir.length > 1) return await getPackageType(resolvePath(dir, ".."), false);
 
   return undefined;
 }

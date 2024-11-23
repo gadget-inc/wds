@@ -1,4 +1,5 @@
 module.exports = {
+  esm: true,
   swc: {
     jsc: {
       parser: {
@@ -7,11 +8,6 @@ module.exports = {
         dynamicImport: true,
       },
       target: "es2020",
-    },
-    module: {
-      type: "commonjs",
-      strictMode: true,
-      lazy: true,
     },
   },
 };

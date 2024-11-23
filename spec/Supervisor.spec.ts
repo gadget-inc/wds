@@ -7,10 +7,17 @@ import { expect, test } from "vitest";
 const dirname = fileURLToPath(new URL(".", import.meta.url));
 
 const childExit = (child: ChildProcess) => {
-  return new Promise<void>((resolve) => {
+  return new Promise<void>((resolve, reject) => {
+    child.on("error", (err: Error) => {
+      reject(err);
+    });
+
     child.on("exit", (code: number) => {
-      resolve();
-      expect(code).toEqual(0);
+      if (code == 0) {
+        resolve();
+      } else {
+        reject(new Error(`Child process exited with code ${code}`));
+      }
     });
   });
 };
@@ -110,4 +117,16 @@ test("it doesn't have any stdin if wds is started with terminal commands", async
   await childExit(child);
 
   expect(output).toEqual("");
+}, 10000);
+
+test("it can load a commonjs module inside a directory that contains a dot when in esm mode", async () => {
+  const binPath = path.join(dirname, "../pkg/wds.bin.js");
+  const scriptPath = path.join(dirname, "fixtures/esm/github.com/wds/simple.ts");
+
+  const child = spawn("node", [binPath, scriptPath], {
+    stdio: ["inherit", "inherit", "inherit"],
+    env: process.env,
+  });
+
+  await childExit(child);
 }, 10000);
