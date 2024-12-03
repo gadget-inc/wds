@@ -1,5 +1,6 @@
+import { findWorkspaceDir as findPnpmWorkspaceRoot } from "@pnpm/find-workspace-dir";
 import findRoot from "find-root";
-import findWorkspaceRoot from "find-yarn-workspace-root";
+import findYarnWorkspaceRoot from "find-yarn-workspace-root";
 import fs from "fs-extra";
 import os from "os";
 import path from "path";
@@ -159,10 +160,10 @@ export const wds = async (options: RunOptions) => {
   if (firstNonOptionArg && fs.existsSync(firstNonOptionArg)) {
     const absolutePath = path.resolve(firstNonOptionArg);
     projectRoot = findRoot(path.dirname(absolutePath));
-    workspaceRoot = findWorkspaceRoot(projectRoot) || projectRoot;
+    workspaceRoot = (await findPnpmWorkspaceRoot(projectRoot)) || findYarnWorkspaceRoot(projectRoot) || projectRoot;
   } else {
     projectRoot = findRoot(process.cwd());
-    workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
+    workspaceRoot = (await findPnpmWorkspaceRoot(process.cwd())) || findYarnWorkspaceRoot(process.cwd()) || process.cwd();
   }
 
   let serverSocketPath: string;

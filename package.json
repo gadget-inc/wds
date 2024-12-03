@@ -40,6 +40,7 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
+    "@pnpm/find-workspace-dir": "^1000.0.0",
     "@swc/core": "^1.9.3",
     "@swc/helpers": "^0.5.13",
     "find-root": "^1.1.0",
@@ -47,8 +48,8 @@
     "fs-extra": "^11.2.0",
     "globby": "^11.1.0",
     "lodash": "^4.17.20",
-    "oxc-resolver": "^1.12.0",
     "node-object-hash": "^3.0.0",
+    "oxc-resolver": "^1.12.0",
     "pkg-dir": "^5.0.0",
     "watcher": "^2.3.1",
     "write-file-atomic": "^6.0.0",

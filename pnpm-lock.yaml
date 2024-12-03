@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@pnpm/find-workspace-dir':
+    specifier: ^1000.0.0
+    version: 1000.0.0
   '@swc/core':
     specifier: ^1.9.3
     version: 1.9.3(@swc/helpers@0.5.13)
@@ -571,6 +574,26 @@ packages:
     requiresBuild: true
     dev: false
     optional: true
+
+  /@pnpm/constants@1000.0.0:
+    resolution: {integrity: sha512-BvWyUBVRI8Vj9QSaGBQZuwy/iH9XiAba4bIAziV+jw9OP7TYfx05pdbDqJZyLBBTzchj4PGTmm1LnUarjZOA+g==}
+    engines: {node: '>=18.12'}
+    dev: false
+
+  /@pnpm/error@1000.0.0:
+    resolution: {integrity: sha512-2umtIxzA2HtjjubZqaiKUpvFV0e9ac/gYW7oa2atxjjKMMIxWOOHjSpmIiev4bQQ5bQi/Sigs0b34Ra48VMpcw==}
+    engines: {node: '>=18.12'}
+    dependencies:
+      '@pnpm/constants': 1000.0.0
+    dev: false
+
+  /@pnpm/find-workspace-dir@1000.0.0:
+    resolution: {integrity: sha512-JLNYdBGHQqw+HE/Cod73io+gcPN6GQ0rgSmkjUSuTS3DmFM4CdNsvl5aCRz8wHZ5ZsFRHJwzIWHfZxcB63jHWA==}
+    engines: {node: '>=18.12'}
+    dependencies:
+      '@pnpm/error': 1000.0.0
+      find-up: 5.0.0
+    dev: false
 
   /@rollup/rollup-android-arm-eabi@4.22.5:
     resolution: {integrity: sha512-SU5cvamg0Eyu/F+kLeMXS7GoahL+OoizlclVFX3l5Ql6yNlywJJ0OuqTzUx0v+aHhPHEB/56CT06GQrRrGNYww==}
