@@ -29,6 +29,9 @@ dependencies:
   lodash:
     specifier: ^4.17.20
     version: 4.17.21
+  micromatch:
+    specifier: ^4.0.8
+    version: 4.0.8
   node-object-hash:
     specifier: ^3.0.0
     version: 3.0.0
@@ -67,6 +70,9 @@ devDependencies:
   '@types/lodash':
     specifier: ^4.17.13
     version: 4.17.13
+  '@types/micromatch':
+    specifier: ^4.0.9
+    version: 4.0.9
   '@types/node':
     specifier: ^22.9.3
     version: 22.9.3
@@ -863,6 +869,10 @@ packages:
     dev: false
     optional: true
 
+  /@types/braces@3.0.4:
+    resolution: {integrity: sha512-0WR3b8eaISjEW7RpZnclONaLFDf7buaowRHdqLp4vLj54AsSAYWfh3DRbfiYJY9XDxMgx1B4sE1Afw2PGpuHOA==}
+    dev: true
+
   /@types/estree@1.0.6:
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
     dev: true
@@ -894,6 +904,12 @@ packages:
 
   /@types/lodash@4.17.13:
     resolution: {integrity: sha512-lfx+dftrEZcdBPczf9d0Qv0x+j/rfNCMuC6OcfXmO8gkfeNAY88PgKUbvG56whcN23gc27yenwF6oJZXGFpYxg==}
+    dev: true
+
+  /@types/micromatch@4.0.9:
+    resolution: {integrity: sha512-7V+8ncr22h4UoYRLnLXSpTxjQrNUXtWHGeMPRJt1nULXI57G9bIcpyrHlmrQ7QK24EyyuXvYcSSWAM8GA9nqCg==}
+    dependencies:
+      '@types/braces': 3.0.4
     dev: true
 
   /@types/minimist@1.2.5:

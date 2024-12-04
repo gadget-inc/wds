@@ -13,7 +13,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import writeFileAtomic from "write-file-atomic";
 import type { Compiler } from "./Compiler.js";
-import { projectConfig, type ProjectConfig } from "./ProjectConfig.js";
+import { projectConfig } from "./ProjectConfig.js";
 import { log } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -184,11 +184,14 @@ export class SwcCompiler implements Compiler {
       swcConfig = config.swc;
     }
 
-    const globs = [...this.fileGlobPatterns(config), ...this.ignoreFileGlobPatterns(config)];
+    log.debug("searching for filenames", { filename, config });
 
-    log.debug("searching for filenames", { filename, config, root, globs });
-
-    let fileNames = await globby(globs, { cwd: root, absolute: true });
+    let fileNames = await globby(config.includeGlob, {
+      onlyFiles: true,
+      cwd: root,
+      absolute: true,
+      ignore: config.ignore,
+    });
 
     if (process.platform === "win32") {
       fileNames = fileNames.map((fileName) => fileName.replace(/\//g, "\\"));
@@ -276,16 +279,6 @@ export class SwcCompiler implements Compiler {
     }
   }
 
-  /** The list of globby patterns to use when searching for files to build */
-  private fileGlobPatterns(config: ProjectConfig) {
-    return [`**/*{${config.extensions.join(",")}}`];
-  }
-
-  /** The list of globby patterns to ignore use when searching for files to build */
-  private ignoreFileGlobPatterns(config: ProjectConfig) {
-    return [`!node_modules`, `!**/*.d.ts`, ...(config.ignore || []).map((ignore) => `!${ignore}`)];
-  }
-
   /**
    * Detect if a file is being ignored by the ignore glob patterns for a given project
    *
@@ -294,16 +287,17 @@ export class SwcCompiler implements Compiler {
   private async isFilenameIgnored(filename: string): Promise<string | false> {
     const root = findRoot(filename);
     const config = await projectConfig(root);
-    const includeGlobs = this.fileGlobPatterns(config);
-    const ignoreGlobs = this.ignoreFileGlobPatterns(config);
 
-    const actual = await globby([...includeGlobs, ...ignoreGlobs], { cwd: root, absolute: true });
-    const all = await globby(includeGlobs, { cwd: root, absolute: true });
-
-    // if the file isn't returned when we use the ignores, but is when we don't use the ignores, it means were ignoring it. Figure out which ignore is causing this
-    if (!actual.includes(filename) && all.includes(filename)) {
-      for (const ignoreGlob of ignoreGlobs) {
-        const withThisIgnore = await globby([...includeGlobs, ignoreGlob], { cwd: root, absolute: true });
+    // check if the file is ignored by any of the ignore patterns using micromatch
+    const included = config.includedMatcher(filename.replace(root + path.sep, ""));
+    if (!included) {
+      // figure out which ignore pattern is causing the file to be ignored for a better error message
+      for (const ignoreGlob of config.ignore) {
+        const withThisIgnore = await globby(config.includeGlob, {
+          cwd: root,
+          absolute: true,
+          ignore: [ignoreGlob],
+        });
         if (!withThisIgnore.includes(filename)) {
           return ignoreGlob;
         }

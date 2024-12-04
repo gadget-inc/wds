@@ -70,16 +70,19 @@ const startFilesystemWatcher = (project: Project) => {
   const watcher = new Watcher([project.workspaceRoot], {
     ignoreInitial: true,
     recursive: true,
-    ignore: ((filePath: string) => {
+    ignore: (filePath: string) => {
       if (filePath.includes(nodeModulesDir)) return true;
+      if (filePath == project.workspaceRoot) return false;
+      if (filePath == project.config.root) return false;
       if (filePath.endsWith(".d.ts")) return true;
       if (filePath.endsWith(".map")) return true;
       if (filePath.includes(gitDir)) return true;
       if (filePath.endsWith(".DS_Store")) return true;
       if (filePath.endsWith(".tsbuildinfo")) return true;
 
-      return project.config.ignore?.some((ignore) => filePath.startsWith(ignore)) ?? false;
-    }) as any,
+      // allow files that match the include glob to be watched, or directories (since they might contain files)
+      return !project.config.includedMatcher(filePath) && path.extname(filePath) != "";
+    },
   });
 
   log.debug("started watcher", { root: project.workspaceRoot });

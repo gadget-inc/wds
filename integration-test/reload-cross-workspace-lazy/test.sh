@@ -34,6 +34,8 @@ echo "Made initial request to server"
 # modify the file in the side package and expect the main script to reload
 sed -i 's/Hello, World/Hey, Pluto/g' $DIR/side/run-scratch.ts
 
+echo "Made change to side package"
+
 counter=0
 until curl -s localhost:8080 | grep "Pluto"
 do
