@@ -1,0 +1,15 @@
+lockfileVersion: '6.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  main:
+    dependencies:
+      side:
+        specifier: workspace:*
+        version: link:../side
+
+  side: {}

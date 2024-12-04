@@ -41,10 +41,10 @@ test("throws if the file is ignored", async () => {
     }
   }
 
-  expect(error).toBeDefined();
+  expect(error).toBeTruthy();
   expect(error?.ignoredFile).toBeTruthy();
   expect(error?.message).toMatch(
-    /File .+ignored\.ts is imported but not being built because it is explicitly ignored in the wds project config\. It is being ignored by the provided glob pattern '!ignored\.ts', remove this pattern from the project config or don't import this file to fix./
+    /File .+ignored\.ts is imported but not being built because it is explicitly ignored in the wds project config\. It is being ignored by the provided glob pattern 'ignored\.ts', remove this pattern from the project config or don't import this file to fix./
   );
 });
 

@@ -1,5 +1,6 @@
+import { findWorkspaceDir as findPnpmWorkspaceRoot } from "@pnpm/find-workspace-dir";
 import findRoot from "find-root";
-import findWorkspaceRoot from "find-yarn-workspace-root";
+import findYarnWorkspaceRoot from "find-yarn-workspace-root";
 import fs from "fs-extra";
 import os from "os";
 import path from "path";
@@ -8,12 +9,12 @@ import { fileURLToPath } from "url";
 import Watcher from "watcher";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import type { ProjectConfig, RunOptions } from "./Options.js";
 import { Project } from "./Project.js";
+import { projectConfig, type ProjectConfig, type RunOptions } from "./ProjectConfig.js";
 import { Supervisor } from "./Supervisor.js";
 import { MissingDestinationError, SwcCompiler } from "./SwcCompiler.js";
 import { MiniServer } from "./mini-server.js";
-import { log, projectConfig } from "./utils.js";
+import { log } from "./utils.js";
 
 const dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -62,20 +63,26 @@ const startTerminalCommandListener = (project: Project) => {
   return reader;
 };
 
+const gitDir = `${path.sep}.git${path.sep}`;
+const nodeModulesDir = `${path.sep}node_modules${path.sep}`;
+
 const startFilesystemWatcher = (project: Project) => {
   const watcher = new Watcher([project.workspaceRoot], {
     ignoreInitial: true,
     recursive: true,
-    ignore: ((filePath: string) => {
-      if (filePath.includes("node_modules")) return true;
+    ignore: (filePath: string) => {
+      if (filePath.includes(nodeModulesDir)) return true;
+      if (filePath == project.workspaceRoot) return false;
+      if (filePath == project.config.root) return false;
       if (filePath.endsWith(".d.ts")) return true;
       if (filePath.endsWith(".map")) return true;
-      if (filePath.endsWith(".git")) return true;
+      if (filePath.includes(gitDir)) return true;
       if (filePath.endsWith(".DS_Store")) return true;
       if (filePath.endsWith(".tsbuildinfo")) return true;
 
-      return project.config.ignore?.some((ignore) => filePath.startsWith(ignore)) ?? false;
-    }) as any,
+      // allow files that match the include glob to be watched, or directories (since they might contain files)
+      return !project.config.includedMatcher(filePath) && path.extname(filePath) != "";
+    },
   });
 
   log.debug("started watcher", { root: project.workspaceRoot });
@@ -159,10 +166,10 @@ export const wds = async (options: RunOptions) => {
   if (firstNonOptionArg && fs.existsSync(firstNonOptionArg)) {
     const absolutePath = path.resolve(firstNonOptionArg);
     projectRoot = findRoot(path.dirname(absolutePath));
-    workspaceRoot = findWorkspaceRoot(projectRoot) || projectRoot;
+    workspaceRoot = (await findPnpmWorkspaceRoot(projectRoot)) || findYarnWorkspaceRoot(projectRoot) || projectRoot;
   } else {
     projectRoot = findRoot(process.cwd());
-    workspaceRoot = findWorkspaceRoot(process.cwd()) || process.cwd();
+    workspaceRoot = (await findPnpmWorkspaceRoot(process.cwd())) || findYarnWorkspaceRoot(process.cwd()) || process.cwd();
   }
 
   let serverSocketPath: string;
