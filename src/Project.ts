@@ -1,7 +1,7 @@
 import _ from "lodash";
 import type { Compiler } from "./Compiler.js";
-import type { ProjectConfig } from "./Options.js";
 import { PathTrie } from "./PathTrie.js";
+import type { ProjectConfig } from "./ProjectConfig.js";
 import type { Supervisor } from "./Supervisor.js";
 import { log } from "./utils.js";
 

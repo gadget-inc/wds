@@ -13,8 +13,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import writeFileAtomic from "write-file-atomic";
 import type { Compiler } from "./Compiler.js";
-import type { ProjectConfig } from "./Options.js";
-import { log, projectConfig } from "./utils.js";
+import { projectConfig, type ProjectConfig } from "./ProjectConfig.js";
+import { log } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const require = createRequire(import.meta.url);

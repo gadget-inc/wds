@@ -9,12 +9,12 @@ import { fileURLToPath } from "url";
 import Watcher from "watcher";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import type { ProjectConfig, RunOptions } from "./Options.js";
 import { Project } from "./Project.js";
+import { projectConfig, type ProjectConfig, type RunOptions } from "./ProjectConfig.js";
 import { Supervisor } from "./Supervisor.js";
 import { MissingDestinationError, SwcCompiler } from "./SwcCompiler.js";
 import { MiniServer } from "./mini-server.js";
-import { log, projectConfig } from "./utils.js";
+import { log } from "./utils.js";
 
 const dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -63,15 +63,18 @@ const startTerminalCommandListener = (project: Project) => {
   return reader;
 };
 
+const gitDir = `${path.sep}.git${path.sep}`;
+const nodeModulesDir = `${path.sep}node_modules${path.sep}`;
+
 const startFilesystemWatcher = (project: Project) => {
   const watcher = new Watcher([project.workspaceRoot], {
     ignoreInitial: true,
     recursive: true,
     ignore: ((filePath: string) => {
-      if (filePath.includes("node_modules")) return true;
+      if (filePath.includes(nodeModulesDir)) return true;
       if (filePath.endsWith(".d.ts")) return true;
       if (filePath.endsWith(".map")) return true;
-      if (filePath.endsWith(".git")) return true;
+      if (filePath.includes(gitDir)) return true;
       if (filePath.endsWith(".DS_Store")) return true;
       if (filePath.endsWith(".tsbuildinfo")) return true;
 
