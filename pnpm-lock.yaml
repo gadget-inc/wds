@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   '@pnpm/find-workspace-dir':
-    specifier: ^1000.0.0
-    version: 1000.0.0
+    specifier: ^1000.0.1
+    version: 1000.0.1
   '@swc/core':
     specifier: ^1.10.1
     version: 1.10.1(@swc/helpers@0.5.15)
@@ -581,23 +581,23 @@ packages:
     dev: false
     optional: true
 
-  /@pnpm/constants@1000.0.0:
-    resolution: {integrity: sha512-BvWyUBVRI8Vj9QSaGBQZuwy/iH9XiAba4bIAziV+jw9OP7TYfx05pdbDqJZyLBBTzchj4PGTmm1LnUarjZOA+g==}
+  /@pnpm/constants@1001.0.0:
+    resolution: {integrity: sha512-yg+S/e8goJoUC4CxyKAplT2fuI94G/nynshPCNkLsi69bUMim5iDMuiiiMo/LeMoOjuyfByealD3u1mqNXrl+A==}
     engines: {node: '>=18.12'}
     dev: false
 
-  /@pnpm/error@1000.0.0:
-    resolution: {integrity: sha512-2umtIxzA2HtjjubZqaiKUpvFV0e9ac/gYW7oa2atxjjKMMIxWOOHjSpmIiev4bQQ5bQi/Sigs0b34Ra48VMpcw==}
+  /@pnpm/error@1000.0.1:
+    resolution: {integrity: sha512-FdDMjp9ORXK/JlxwjlNF7mRohVKx5pvM01bxsVUSLFLZ9/oMBtDceWlntUTLhvr2MwYcr69mGilTojnXEbsjQA==}
     engines: {node: '>=18.12'}
     dependencies:
-      '@pnpm/constants': 1000.0.0
+      '@pnpm/constants': 1001.0.0
     dev: false
 
-  /@pnpm/find-workspace-dir@1000.0.0:
-    resolution: {integrity: sha512-JLNYdBGHQqw+HE/Cod73io+gcPN6GQ0rgSmkjUSuTS3DmFM4CdNsvl5aCRz8wHZ5ZsFRHJwzIWHfZxcB63jHWA==}
+  /@pnpm/find-workspace-dir@1000.0.1:
+    resolution: {integrity: sha512-FBiOEB8V+xPKfErdA/N2R3WvAuNQ/CFxhTFgvWc1g+e15m51e067ATKkVqluWA0XYmz1TEbw0itwSMB7MP6DfA==}
     engines: {node: '>=18.12'}
     dependencies:
-      '@pnpm/error': 1000.0.0
+      '@pnpm/error': 1000.0.1
       find-up: 5.0.0
     dev: false
 
