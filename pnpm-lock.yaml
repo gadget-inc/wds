@@ -9,8 +9,8 @@ dependencies:
     specifier: ^1000.0.1
     version: 1000.0.1
   '@swc/core':
-    specifier: ^1.10.1
-    version: 1.10.1(@swc/helpers@0.5.15)
+    specifier: ^1.10.3
+    version: 1.10.3(@swc/helpers@0.5.15)
   '@swc/helpers':
     specifier: ^0.5.15
     version: 0.5.15
@@ -729,8 +729,8 @@ packages:
     dev: true
     optional: true
 
-  /@swc/core-darwin-arm64@1.10.1:
-    resolution: {integrity: sha512-NyELPp8EsVZtxH/mEqvzSyWpfPJ1lugpTQcSlMduZLj1EASLO4sC8wt8hmL1aizRlsbjCX+r0PyL+l0xQ64/6Q==}
+  /@swc/core-darwin-arm64@1.10.3:
+    resolution: {integrity: sha512-LFFCxAUKBy69AUE+01rgazQcafIXrYs6tBa9SyKPR51ft6Tp66dAVrWg9MTykaWskuXEe80LPUvUw1ga3bOH3A==}
     engines: {node: '>=10'}
     cpu: [arm64]
     os: [darwin]
@@ -738,8 +738,8 @@ packages:
     dev: false
     optional: true
 
-  /@swc/core-darwin-x64@1.10.1:
-    resolution: {integrity: sha512-L4BNt1fdQ5ZZhAk5qoDfUnXRabDOXKnXBxMDJ+PWLSxOGBbWE6aJTnu4zbGjJvtot0KM46m2LPAPY8ttknqaZA==}
+  /@swc/core-darwin-x64@1.10.3:
+    resolution: {integrity: sha512-yZNv1+yPg0GvYdThsMI8WpaPRAPuw2gQDMdgijLFfRcRlr2l1sTWsDHqGd7QMTx+acYM3uB537gyd31WjUAwlQ==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [darwin]
@@ -747,8 +747,8 @@ packages:
     dev: false
     optional: true
 
-  /@swc/core-linux-arm-gnueabihf@1.10.1:
-    resolution: {integrity: sha512-Y1u9OqCHgvVp2tYQAJ7hcU9qO5brDMIrA5R31rwWQIAKDkJKtv3IlTHF0hrbWk1wPR0ZdngkQSJZple7G+Grvw==}
+  /@swc/core-linux-arm-gnueabihf@1.10.3:
+    resolution: {integrity: sha512-Qa6hu5ASoKV4rcYUBGG3y3z+9UT042KAG4A7ivqqYQFcMfkB4NbZb5So2YWOpUc0/5YlSVkgL22h3Mbj5EXy7A==}
     engines: {node: '>=10'}
     cpu: [arm]
     os: [linux]
@@ -756,8 +756,8 @@ packages:
     dev: false
     optional: true
 
-  /@swc/core-linux-arm64-gnu@1.10.1:
-    resolution: {integrity: sha512-tNQHO/UKdtnqjc7o04iRXng1wTUXPgVd8Y6LI4qIbHVoVPwksZydISjMcilKNLKIwOoUQAkxyJ16SlOAeADzhQ==}
+  /@swc/core-linux-arm64-gnu@1.10.3:
+    resolution: {integrity: sha512-BGnoZrmo0nlkXrOxVHk5U3j9u4BuquFviC+LvMe+HrDc5YLVe1gSXMUSBKhIz9MY9uFgxXW977TnB1XjLSKe5Q==}
     engines: {node: '>=10'}
     cpu: [arm64]
     os: [linux]
@@ -765,8 +765,8 @@ packages:
     dev: false
     optional: true
 
-  /@swc/core-linux-arm64-musl@1.10.1:
-    resolution: {integrity: sha512-x0L2Pd9weQ6n8dI1z1Isq00VHFvpBClwQJvrt3NHzmR+1wCT/gcYl1tp9P5xHh3ldM8Cn4UjWCw+7PaUgg8FcQ==}
+  /@swc/core-linux-arm64-musl@1.10.3:
+    resolution: {integrity: sha512-L07/4zKnIY2S/00bE+Yn3oEHkyGjWmGGE8Ta4luVCL+00s04EIwMoE1Hc8E8xFB5zLew5ViKFc5kNb5YZ/tRFQ==}
     engines: {node: '>=10'}
     cpu: [arm64]
     os: [linux]
@@ -774,8 +774,8 @@ packages:
     dev: false
     optional: true
 
-  /@swc/core-linux-x64-gnu@1.10.1:
-    resolution: {integrity: sha512-yyYEwQcObV3AUsC79rSzN9z6kiWxKAVJ6Ntwq2N9YoZqSPYph+4/Am5fM1xEQYf/kb99csj0FgOelomJSobxQA==}
+  /@swc/core-linux-x64-gnu@1.10.3:
+    resolution: {integrity: sha512-cvTCekY4u0fBIDNfhv/2UxcOXqH4XJE2iNxKuQejS5KIapFJwrZ+fRQ2lha3+yopI/d2p96BlBEWTAcBzeTntw==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [linux]
@@ -783,8 +783,8 @@ packages:
     dev: false
     optional: true
 
-  /@swc/core-linux-x64-musl@1.10.1:
-    resolution: {integrity: sha512-tcaS43Ydd7Fk7sW5ROpaf2Kq1zR+sI5K0RM+0qYLYYurvsJruj3GhBCaiN3gkzd8m/8wkqNqtVklWaQYSDsyqA==}
+  /@swc/core-linux-x64-musl@1.10.3:
+    resolution: {integrity: sha512-h9kUOTrSSpY9JNc41a+NMAwK62USk/pvNE9Fi/Pfoklmlf9j9j8gRCitqvHpmZcEF4PPIsoMdiGetDipTwvWlw==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [linux]
@@ -792,8 +792,8 @@ packages:
     dev: false
     optional: true
 
-  /@swc/core-win32-arm64-msvc@1.10.1:
-    resolution: {integrity: sha512-D3Qo1voA7AkbOzQ2UGuKNHfYGKL6eejN8VWOoQYtGHHQi1p5KK/Q7V1ku55oxXBsj79Ny5FRMqiRJpVGad7bjQ==}
+  /@swc/core-win32-arm64-msvc@1.10.3:
+    resolution: {integrity: sha512-iHOmLYkZYn3r1Ff4rfyczdrYGt/wVIWyY0t8swsO9o1TE+zmucGFZuYZzgj3ng8Kp4sojJrydAGz8TINQZDBzQ==}
     engines: {node: '>=10'}
     cpu: [arm64]
     os: [win32]
@@ -801,8 +801,8 @@ packages:
     dev: false
     optional: true
 
-  /@swc/core-win32-ia32-msvc@1.10.1:
-    resolution: {integrity: sha512-WalYdFoU3454Og+sDKHM1MrjvxUGwA2oralknXkXL8S0I/8RkWZOB++p3pLaGbTvOO++T+6znFbQdR8KRaa7DA==}
+  /@swc/core-win32-ia32-msvc@1.10.3:
+    resolution: {integrity: sha512-4SqLSE4Ozh8SxuVuHIZhkSyJQru5+WbQMRs5ggLRqeUy3vkUPHOAFAY3oMwDJUN6BwbAr8+664TmdrMwaWh8Ng==}
     engines: {node: '>=10'}
     cpu: [ia32]
     os: [win32]
@@ -810,8 +810,8 @@ packages:
     dev: false
     optional: true
 
-  /@swc/core-win32-x64-msvc@1.10.1:
-    resolution: {integrity: sha512-JWobfQDbTnoqaIwPKQ3DVSywihVXlQMbDuwik/dDWlj33A8oEHcjPOGs4OqcA3RHv24i+lfCQpM3Mn4FAMfacA==}
+  /@swc/core-win32-x64-msvc@1.10.3:
+    resolution: {integrity: sha512-jTyf/IbNq7NVyqqDIEDzgjALjWu1IMfXKLXXAJArreklIMzkfHU1sV32ZJLOBmRKPyslCoalxIAU+hTx4reUTQ==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [win32]
@@ -819,8 +819,8 @@ packages:
     dev: false
     optional: true
 
-  /@swc/core@1.10.1(@swc/helpers@0.5.15):
-    resolution: {integrity: sha512-rQ4dS6GAdmtzKiCRt3LFVxl37FaY1cgL9kSUTnhQ2xc3fmHOd7jdJK/V4pSZMG1ruGTd0bsi34O2R0Olg9Zo/w==}
+  /@swc/core@1.10.3(@swc/helpers@0.5.15):
+    resolution: {integrity: sha512-2yjqCcsBx6SNBQZIYNlwxED9aYXW/7QBZyr8LYAxTx5bzmoNhKiClYbsNLe1NJ6ccf5uSbcInw12PjXLduNEdQ==}
     engines: {node: '>=10'}
     requiresBuild: true
     peerDependencies:
@@ -833,16 +833,16 @@ packages:
       '@swc/helpers': 0.5.15
       '@swc/types': 0.1.17
     optionalDependencies:
-      '@swc/core-darwin-arm64': 1.10.1
-      '@swc/core-darwin-x64': 1.10.1
-      '@swc/core-linux-arm-gnueabihf': 1.10.1
-      '@swc/core-linux-arm64-gnu': 1.10.1
-      '@swc/core-linux-arm64-musl': 1.10.1
-      '@swc/core-linux-x64-gnu': 1.10.1
-      '@swc/core-linux-x64-musl': 1.10.1
-      '@swc/core-win32-arm64-msvc': 1.10.1
-      '@swc/core-win32-ia32-msvc': 1.10.1
-      '@swc/core-win32-x64-msvc': 1.10.1
+      '@swc/core-darwin-arm64': 1.10.3
+      '@swc/core-darwin-x64': 1.10.3
+      '@swc/core-linux-arm-gnueabihf': 1.10.3
+      '@swc/core-linux-arm64-gnu': 1.10.3
+      '@swc/core-linux-arm64-musl': 1.10.3
+      '@swc/core-linux-x64-gnu': 1.10.3
+      '@swc/core-linux-x64-musl': 1.10.3
+      '@swc/core-win32-arm64-msvc': 1.10.3
+      '@swc/core-win32-ia32-msvc': 1.10.3
+      '@swc/core-win32-x64-msvc': 1.10.3
     dev: false
 
   /@swc/counter@0.1.3:
