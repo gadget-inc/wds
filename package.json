@@ -62,7 +62,7 @@
     "@gadgetinc/prettier-config": "^0.4.0",
     "@types/find-root": "^1.1.4",
     "@types/fs-extra": "^11.0.4",
-    "@types/lodash": "^4.17.13",
+    "@types/lodash": "^4.17.14",
     "@types/micromatch": "^4.0.9",
     "@types/node": "^22.10.1",
     "@types/write-file-atomic": "^4.0.3",
