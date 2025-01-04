@@ -64,7 +64,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/lodash": "^4.17.13",
     "@types/micromatch": "^4.0.9",
-    "@types/node": "^22.10.1",
+    "@types/node": "^22.10.5",
     "@types/write-file-atomic": "^4.0.3",
     "@types/yargs": "^15.0.19",
     "eslint": "^8.57.1",
