@@ -70,7 +70,7 @@
     "eslint": "^8.57.1",
     "gitpkg": "github:airhorns/gitpkg#gitpkg-v1.0.0-beta.4-gitpkg-82083c3",
     "prettier": "^2.8.8",
-    "typescript": "^5.7.2",
+    "typescript": "^5.7.3",
     "vitest": "^2.1.8",
     "zx": "^7.2.3"
   },
