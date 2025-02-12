@@ -5,7 +5,7 @@ outputs: {}
 runs:
   using: "composite"
   steps:
-    - uses: cachix/install-nix-action@v20
+    - uses: cachix/install-nix-action@v30
     - run: |
         source <(nix print-dev-env --show-trace) 
         output_file="nix-env.txt"
