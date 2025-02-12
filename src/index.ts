@@ -204,9 +204,9 @@ export const wds = async (options: RunOptions) => {
     void project.shutdown(0);
   });
 
-  project.supervisor.process.on("exit", (code) => {
+  project.supervisor.process.on("exit", (code, signal) => {
     const logShutdown = (explanation: string) => {
-      log.debug(`child process exited with code ${code}, ${explanation}`);
+      log.debug(`child process exited with code=${code} signal=${signal}, ${explanation}`);
     };
     if (options.reloadOnChanges) {
       logShutdown("not exiting because we're on 'watch' mode");
