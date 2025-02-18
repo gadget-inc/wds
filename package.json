@@ -50,7 +50,7 @@
     "lodash": "^4.17.20",
     "micromatch": "^4.0.8",
     "node-object-hash": "^3.1.1",
-    "oxc-resolver": "^1.12.0",
+    "oxc-resolver": "^4.1.0",
     "pkg-dir": "^5.0.0",
     "watcher": "^2.3.1",
     "write-file-atomic": "^6.0.0",
