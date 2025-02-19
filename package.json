@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@pnpm/find-workspace-dir": "^1000.0.1",
-    "@swc/core": "^1.10.9",
+    "@swc/core": "^1.10.12",
     "@swc/helpers": "^0.5.15",
     "find-root": "^1.1.0",
     "find-yarn-workspace-root": "^2.0.0",
