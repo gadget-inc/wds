@@ -68,8 +68,8 @@ devDependencies:
     specifier: ^11.0.4
     version: 11.0.4
   '@types/lodash':
-    specifier: ^4.17.13
-    version: 4.17.13
+    specifier: ^4.17.15
+    version: 4.17.15
   '@types/micromatch':
     specifier: ^4.0.9
     version: 4.0.9
@@ -902,8 +902,8 @@ packages:
       '@types/node': 22.10.1
     dev: true
 
-  /@types/lodash@4.17.13:
-    resolution: {integrity: sha512-lfx+dftrEZcdBPczf9d0Qv0x+j/rfNCMuC6OcfXmO8gkfeNAY88PgKUbvG56whcN23gc27yenwF6oJZXGFpYxg==}
+  /@types/lodash@4.17.15:
+    resolution: {integrity: sha512-w/P33JFeySuhN6JLkysYUK2gEmy9kHHFN7E8ro0tkfmlDOgxBDzWEZ/J8cWA+fHqFevpswDTFZnDx+R9lbL6xw==}
     dev: true
 
   /@types/micromatch@4.0.9:
