@@ -61,8 +61,8 @@ export class Project {
     this.supervisor.restart();
   }
 
-  async shutdown(code = 0) {
-    await this.supervisor.stop();
+  async shutdown(code: number, signal: NodeJS.Signals = "SIGTERM") {
+    await this.supervisor.stop(signal);
     for (const cleanup of this.cleanups) {
       cleanup();
     }

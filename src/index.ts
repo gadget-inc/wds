@@ -197,11 +197,11 @@ export const wds = async (options: RunOptions) => {
 
   process.on("SIGINT", () => {
     log.debug(`process ${process.pid} got SIGINT`);
-    void project.shutdown(0);
+    void project.shutdown(0, "SIGINT");
   });
   process.on("SIGTERM", () => {
     log.debug(`process ${process.pid} got SIGTERM`);
-    void project.shutdown(0);
+    void project.shutdown(0, "SIGTERM");
   });
 
   project.supervisor.process.on("exit", (code, signal) => {
