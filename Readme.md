@@ -24,6 +24,7 @@ wds --inspect some-test.test.ts
 - Builds and runs TypeScript really fast using [`swc`](https://github.com/swc-project/swc)
 - Incrementally rebuilds only what has changed in `--watch` mode, restarting the process on file changes
 - Full support for CommonJS and ESM packages (subject to node's own interoperability rules)
+- Great support for really huge projects and monorepos
 - Caches transformed files on disk for warm startups on process reload (with expiry when config or source changes)
 - Execute commands on demand with the `--commands` mode
 - Plays nice with node.js command line flags like `--inspect` or `--prof`
@@ -142,3 +143,7 @@ Refer to [the SWC docs](https://swc.rs/docs/configuration/swcrc) for more info.
 # Comparison to `ts-node-dev`
 
 `ts-node-dev` (and `ts-node`) accomplish a similar feat but are often 5-10x slower than `wds` in big projects. They are loaded with features and will keep up with new TypeScript features much better as they use the mainline TypeScript compiler sources, and we think they make lots of sense! Because they use TypeScript proper for compilation though, even with `--transpile-only`, they are destined to be slower than `swc`. `wds` is for the times where you care a lot more about performance and are ok with the tradeoffs `swc` makes, like not supporting `const enum` and being a touch behind on supporting new TypeScript releases.
+
+# Comparison to `tsx`
+
+`tsx` is a great, low-config TypeScript runner with a similar just-transpile-and-dont-typecheck approach. But, it has slower startup when run for the first time, and fewer fancy optimizations for restarting really large projects that use the `lazy: true` option in SWC to maximize reload speed. `wds` shines brightest when used as Gadget uses it against a many-million line TypeScript monorepo.
