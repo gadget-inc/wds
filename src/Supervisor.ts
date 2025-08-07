@@ -14,11 +14,11 @@ export class Supervisor extends EventEmitter {
   }
 
   /**
-   * Stop the process with a graceful SIGTERM, then SIGKILL after a timeout
+   * Stop the process with a given signal, then SIGKILL after a timeout
    * Kills the whole process group so that any subprocesses of the process are also killed
    * See https://azimi.me/2014/12/31/kill-child_process-node-js.html for more information
    */
-  async stop() {
+  async stop(signal: NodeJS.Signals = "SIGTERM") {
     // if we never started the child process, we don't need to do anything
     if (!this.process || !this.process.pid) return;
 
@@ -27,7 +27,7 @@ export class Supervisor extends EventEmitter {
 
     const ref = this.process;
     const exit = once(ref, "exit");
-    this.kill("SIGTERM");
+    this.kill(signal);
 
     await Promise.race([exit, setTimeout(5000)]);
     if (!ref.killed) {
@@ -35,7 +35,7 @@ export class Supervisor extends EventEmitter {
     }
   }
 
-  kill(signal = "SIGKILL", pid = this.process?.pid) {
+  kill(signal: NodeJS.Signals = "SIGKILL", pid = this.process?.pid) {
     if (pid) {
       try {
         process.kill(-pid, signal);
