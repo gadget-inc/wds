@@ -203,6 +203,10 @@ export const wds = async (options: RunOptions) => {
     log.debug(`process ${process.pid} got SIGTERM`);
     void project.shutdown(0, "SIGTERM");
   });
+  process.on("SIGQUIT", () => {
+    log.debug(`process ${process.pid} got SIGQUIT`);
+    void project.shutdown(0, "SIGQUIT");
+  });
 
   project.supervisor.process.on("exit", (code, signal) => {
     const logShutdown = (explanation: string) => {

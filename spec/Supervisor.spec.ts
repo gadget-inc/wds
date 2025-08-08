@@ -130,3 +130,135 @@ test("it can load a commonjs module inside a directory that contains a dot when 
 
   await childExit(child);
 }, 10000);
+
+const runSignalOrderTest = async (signal: NodeJS.Signals) => {
+  const binPath = path.join(dirname, "../pkg/wds.bin.js");
+  const scriptPath = path.join(dirname, "fixtures/src/signal-order.ts");
+
+  const child = spawn("node", [binPath, scriptPath], {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: process.env,
+  });
+
+  let stdout = "";
+  let isReady = false;
+  const onData = (data: Buffer) => {
+    stdout += data.toString();
+    if (!isReady && stdout.includes("parent:ready") && stdout.includes("grandchild:ready")) {
+      isReady = true;
+    }
+  };
+  child.stdout?.on("data", onData);
+
+  await new Promise<void>((resolve) => {
+    const checkReady = () => (isReady ? resolve() : setTimeout(checkReady, 50));
+    checkReady();
+  });
+
+  const wdsPid = child.pid;
+
+
+  child.kill(signal);
+
+  await childExit(child);
+
+  // give any SIGKILLs time to propagate
+  await new Promise((resolve) => setTimeout(resolve, 250));
+
+  let parentPid: number | undefined;
+  let grandchildPid: number | undefined;
+  const lines = stdout.split(/\r?\n/).filter(Boolean).map((line) => {
+    if (line.includes("parent:ready")) {
+      parentPid = parseInt(line.split(":")[2]);
+      return `parent:ready`;
+    } else if (line.includes("grandchild:ready")) {
+      grandchildPid = parseInt(line.split(":")[2]);
+      return `grandchild:ready`;
+    }
+    return line;
+  });
+
+  return { lines, wdsPid, parentPid, grandchildPid };
+}
+
+const isPidAlive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    if (e.code === "ESRCH") {
+      return false;
+    }
+    throw e;
+  }
+}
+
+test("it kills the child first, then the process group on stop", async () => {
+  const { lines, wdsPid, parentPid, grandchildPid } = await runSignalOrderTest("SIGTERM");
+  expect(wdsPid).toBeDefined();
+  expect(parentPid).toBeDefined();
+  expect(grandchildPid).toBeDefined();
+  expect(parentPid).not.toBe(wdsPid);
+  expect(grandchildPid).not.toBe(wdsPid);
+  expect(parentPid).not.toBe(grandchildPid);
+
+  expect(isPidAlive(wdsPid!)).toBe(false);
+  expect(isPidAlive(parentPid!)).toBe(false);
+  expect(isPidAlive(grandchildPid!)).toBe(false);
+
+  expect(lines).toMatchInlineSnapshot(`
+    [
+      "parent:ready",
+      "grandchild:ready",
+      "parent:exit-SIGTERM",
+      "grandchild:sigterm",
+      "parent:grandchild-exit",
+    ]
+  `);
+}, 20000);
+
+test("it kills grandchildren if they have not shutdown by the time the parent process exits", async () => {
+  const { lines, wdsPid, parentPid, grandchildPid } = await runSignalOrderTest("SIGINT");
+  expect(wdsPid).toBeDefined();
+  expect(parentPid).toBeDefined();
+  expect(grandchildPid).toBeDefined();
+  expect(parentPid).not.toBe(wdsPid);
+  expect(grandchildPid).not.toBe(wdsPid);
+  expect(parentPid).not.toBe(grandchildPid);
+
+  expect(isPidAlive(wdsPid!)).toBe(false);
+  expect(isPidAlive(parentPid!)).toBe(false);
+  expect(isPidAlive(grandchildPid!)).toBe(false);
+
+  expect(lines).toMatchInlineSnapshot(`
+    [
+      "parent:ready",
+      "grandchild:ready",
+      "parent:exit-SIGINT",
+      "grandchild:sigint",
+      "parent:exit-timeout",
+    ]
+  `);
+}, 20000);
+
+test("it kills the whole process group if the child process doesn't exit before the timeout", async () => {
+  const { lines, wdsPid, parentPid, grandchildPid } = await runSignalOrderTest("SIGQUIT");
+  expect(wdsPid).toBeDefined();
+  expect(parentPid).toBeDefined();
+  expect(grandchildPid).toBeDefined();
+  expect(parentPid).not.toBe(wdsPid);
+  expect(grandchildPid).not.toBe(wdsPid);
+  expect(parentPid).not.toBe(grandchildPid);
+
+  expect(isPidAlive(wdsPid!)).toBe(false);
+  expect(isPidAlive(parentPid!)).toBe(false);
+  expect(isPidAlive(grandchildPid!)).toBe(false);
+
+  expect(lines).toMatchInlineSnapshot(`
+    [
+      "parent:ready",
+      "grandchild:ready",
+      "parent:sigquit",
+    ]
+  `);
+}, 20000);
