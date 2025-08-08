@@ -17,6 +17,8 @@ export class Project {
   supervisor!: Supervisor;
   watched = new PathTrie();
 
+  private shuttingDown?: Promise<void>;
+
   constructor(readonly workspaceRoot: string, readonly config: ProjectConfig, readonly compiler: Compiler) {}
 
   addShutdownCleanup(cleanup: () => void) {
@@ -62,11 +64,19 @@ export class Project {
   }
 
   async shutdown(code: number, signal: NodeJS.Signals = "SIGTERM") {
-    await this.supervisor.stop(signal);
-    for (const cleanup of this.cleanups) {
-      cleanup();
+    if (this.shuttingDown) {
+      return await this.shuttingDown;
     }
-    process.exit(code);
+
+    this.shuttingDown = (async () => {
+      await this.supervisor.stop(signal);
+      for (const cleanup of this.cleanups) {
+        cleanup();
+      }
+      process.exit(code);
+    })();
+
+    return await this.shuttingDown;
   }
 
   watchFile(path: string) {

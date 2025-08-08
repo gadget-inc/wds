@@ -1,7 +1,6 @@
 import type { ChildProcess, StdioOptions } from "child_process";
 import { spawn } from "child_process";
-import { EventEmitter, once } from "events";
-import { setTimeout } from "timers/promises";
+import { EventEmitter } from "events";
 import type { Project } from "./Project.js";
 import type { RunOptions } from "./ProjectConfig.js";
 import { log } from "./utils.js";
@@ -9,48 +8,63 @@ import { log } from "./utils.js";
 /** */
 export class Supervisor extends EventEmitter {
   process!: ChildProcess;
+  private stopping?: Promise<void>;
+
   constructor(readonly argv: string[], readonly socketPath: string, readonly options: RunOptions, readonly project: Project) {
     super();
   }
 
   /**
    * Stop the process with a given signal, then SIGKILL after a timeout
-   * Kills the whole process group so that any subprocesses of the process are also killed
+   * First signals only the ref'd process; once it exits, signal the rest of the process group.
+   * Falls back to SIGKILL on the group if the ref'd process doesn't exit in time.
    * See https://azimi.me/2014/12/31/kill-child_process-node-js.html for more information
    */
   async stop(signal: NodeJS.Signals = "SIGTERM") {
-    // if we never started the child process, we don't need to do anything
-    if (!this.process || !this.process.pid) return;
-
-    // if the child process has already exited, we don't need to do anything
-    if (this.process.exitCode !== null) return;
-
-    const ref = this.process;
-    const exit = once(ref, "exit");
-    this.kill(signal);
-
-    await Promise.race([exit, setTimeout(5000)]);
-    if (!ref.killed) {
-      this.kill("SIGKILL", ref.pid);
+    if (this.stopping) {
+      return await this.stopping;
     }
-  }
 
-  kill(signal: NodeJS.Signals = "SIGKILL", pid = this.process?.pid) {
-    if (pid) {
-      try {
-        process.kill(-pid, signal);
-      } catch (error: any) {
-        if (error.code == "ESRCH" || error.code == "EPERM") {
-          // process can't be found or can't be killed again, its already dead
-        } else {
-          throw error;
-        }
+    this.stopping = (async () => {
+      // if we never started the child process, we don't need to do anything
+      if (!this.process || !this.process.pid) return;
+
+      // if the child process has already exited, we don't need to do anything
+      if (this.process.exitCode !== null) return;
+
+      // signal the child process and give if time to gracefully close, allow the child process
+      // the chance to attempt a graceful shutdown of any child processes it may have spawned
+      // once the child process exits, SIGKILL the rest of the process group that haven't exited yet
+      // if the child process doesn't exit in time, SIGKILL the whole process group
+      const ref = this.process;
+      const refPid = ref.pid;
+
+      log.debug(`stopping process ${refPid} with signal ${signal}`);
+
+      this.kill(signal, refPid, false);
+
+      const exited = await Promise.race([
+        new Promise<boolean>((resolve) => ref.once("exit", () => resolve(true))),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 5000)),
+      ]);
+
+      if (exited) {
+        log.debug(`process ${refPid} exited successfully, killing process group`);
+      } else {
+        log.debug(`process ${refPid} did not exit in time, killing process group`);
       }
-    }
+
+      this.kill("SIGKILL", refPid, true);
+    })();
+
+    return await this.stopping;
   }
 
   restart() {
-    this.kill();
+    if (this.process?.pid) {
+      log.debug(`restarting process group ${this.process.pid} with SIGKILL`);
+      this.kill();
+    }
 
     const stdio: StdioOptions = [null, "inherit", "inherit"];
     if (!this.options.terminalCommands) {
@@ -95,5 +109,24 @@ export class Supervisor extends EventEmitter {
     });
 
     return this.process;
+  }
+
+  private kill(signal: NodeJS.Signals = "SIGKILL", pid = this.process?.pid, group = true) {
+    if (!pid) return;
+    if (group) {
+      log.debug(`killing process group ${pid} with signal ${signal}`);
+    } else {
+      log.debug(`killing process ${pid} with signal ${signal}`);
+    }
+    try {
+      if (group) {
+        process.kill(-pid, signal);
+      } else {
+        process.kill(pid, signal);
+      }
+    } catch (error: any) {
+      log.debug(`error killing process ${pid} with signal ${signal}: ${error.message}`);
+      if (error.code !== "ESRCH" && error.code !== "EPERM") throw error;
+    }
   }
 }
