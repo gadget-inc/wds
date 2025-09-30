@@ -80,8 +80,14 @@ const startFilesystemWatcher = (project: Project) => {
       if (filePath.endsWith(".DS_Store")) return true;
       if (filePath.endsWith(".tsbuildinfo")) return true;
 
-      // allow files that match the include glob to be watched, or directories (since they might contain files)
-      return !project.config.includedMatcher(filePath) && path.extname(filePath) != "";
+      // Don't watch anything outside the workspace root
+      // This prevents climbing up into parent directories like /Users/home
+      if (!filePath.startsWith(project.workspaceRoot + path.sep) && filePath !== project.workspaceRoot) {
+        return true; // ignore paths outside workspace
+      }
+
+      // check the project's included file matcher
+      return !project.config.includedMatcher(filePath);
     },
   });
 
