@@ -103,6 +103,7 @@ const startFilesystemWatcher = (project: Project) => {
   watcher.on("addDir", invalidateAndReload);
   watcher.on("unlink", invalidateAndReload);
   watcher.on("unlinkDir", invalidateAndReload);
+  watcher.on("error", (error) => log.error("watcher error", error));
 
   project.addShutdownCleanup(() => void watcher.close());
 
