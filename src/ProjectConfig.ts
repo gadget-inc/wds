@@ -17,7 +17,14 @@ export interface ProjectConfig {
   root: string;
   ignore: string[];
   includeGlob: string;
-  includedMatcher: (filePath: string) => boolean;
+  /**
+   * Checks if a file or directory should be included/watched.
+   * Only accepts absolute paths.
+   * - For files with extensions: checks extension match and ignore patterns
+   * - For directories/extensionless files: checks ignore patterns only
+   * Files outside the project root are allowed to support monorepo/workspace scenarios.
+   */
+  includedMatcher: (absoluteFilePath: string) => boolean;
   swc?: SwcConfig;
   esm?: boolean;
   extensions: string[];
@@ -66,9 +73,74 @@ export const projectConfig = _.memoize(async (root: string): Promise<ProjectConf
   }
 
   // build inclusion glob and matcher
-  result.ignore = _.uniq([`node_modules`, `**/*.d.ts`, `.git/**`, ...result.ignore]);
+  // Convert all ignore patterns to absolute paths
+  const absoluteIgnorePatterns = result.ignore.map((pattern) => {
+    let absolutePattern: string;
+
+    // Step 1: Determine the base path (prefix handling)
+    if (pattern.startsWith("/")) {
+      // Already absolute
+      absolutePattern = pattern;
+    } else if (pattern.startsWith("../") || pattern.startsWith("./")) {
+      // Relative to project root
+      absolutePattern = path.resolve(projectRootDir, pattern);
+    } else if (pattern.startsWith("**/")) {
+      // Glob pattern that should match anywhere under project root
+      absolutePattern = path.join(projectRootDir, pattern);
+    } else {
+      // Relative pattern that should match at any depth under project root
+      absolutePattern = path.join(projectRootDir, "**", pattern);
+    }
+
+    // Step 2: Determine if we need to add suffix for directory patterns
+    // Check the original pattern for these characteristics
+    if (pattern.endsWith("/")) {
+      // Ends with slash - match everything inside
+      // Remove trailing slash if present, then add /**
+      absolutePattern = absolutePattern.replace(/\/$/, "") + "/**";
+    } else if (!path.extname(pattern) && !pattern.includes("*")) {
+      // No extension and no wildcards - looks like a directory name
+      if (!absolutePattern.endsWith("/**")) {
+        absolutePattern = `${absolutePattern}/**`;
+      }
+    }
+
+    return absolutePattern;
+  });
+
+  const defaultIgnores = [
+    path.join(projectRootDir, "**/node_modules/**"),
+    path.join(projectRootDir, "**/*.d.ts"),
+    path.join(projectRootDir, "**/.git/**"),
+  ];
+
+  result.ignore = _.uniq([...defaultIgnores, ...absoluteIgnorePatterns]);
   result.includeGlob = `**/*{${result.extensions.join(",")}}`;
-  result.includedMatcher = micromatch.matcher(result.includeGlob, { cwd: result.root, ignore: result.ignore });
+
+  // Build an absolute include pattern that matches files with the right extensions anywhere in the filesystem
+  // This allows compilation of files outside the project root (e.g., in monorepo sibling packages)
+  const absoluteIncludePattern = `/**/*{${result.extensions.join(",")}}`;
+
+  // Pre-compile matchers for performance
+  const fileMatcher = micromatch.matcher(absoluteIncludePattern, { ignore: result.ignore });
+
+  // For directories/extensionless files, pre-compile individual matchers for each ignore pattern
+  // micromatch.matcher is fast because it compiles the pattern to a regex once
+  const directoryIgnoreMatchers = result.ignore.map((pattern) => micromatch.matcher(pattern));
+
+  // Single unified matcher that handles both files and directories
+  result.includedMatcher = (absolutePath: string) => {
+    const hasExtension = path.extname(absolutePath) !== "";
+
+    if (hasExtension) {
+      // Files with extensions: use the full file matcher (checks extension + ignores)
+      return fileMatcher(absolutePath);
+    } else {
+      // Directories/extensionless files: check if they match any ignore pattern
+      // Return true (include) if they DON'T match any ignore pattern
+      return !directoryIgnoreMatchers.some((matcher) => matcher(absolutePath));
+    }
+  };
 
   return result;
 });

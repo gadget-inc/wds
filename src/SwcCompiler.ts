@@ -8,6 +8,7 @@ import findRoot from "find-root";
 import * as fs from "fs/promises";
 import globby from "globby";
 import _ from "lodash";
+import micromatch from "micromatch";
 import { hasher } from "node-object-hash";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -184,13 +185,21 @@ export class SwcCompiler implements Compiler {
       swcConfig = config.swc;
     }
 
-    log.debug("searching for filenames", { filename, config });
+    const ignores = config.ignore
+      .filter((ignore) => {
+        return ignore.startsWith(root);
+      })
+      .map((ignore) => {
+        return ignore.replace(root + "/", "");
+      });
+
+    log.debug("searching for filenames", { filename, config, ignores });
 
     let fileNames = await globby(config.includeGlob, {
       onlyFiles: true,
       cwd: root,
       absolute: true,
-      ignore: config.ignore,
+      ignore: ignores,
     });
 
     if (process.platform === "win32") {
@@ -288,17 +297,12 @@ export class SwcCompiler implements Compiler {
     const root = findRoot(filename);
     const config = await projectConfig(root);
 
-    // check if the file is ignored by any of the ignore patterns using micromatch
-    const included = config.includedMatcher(filename.replace(root + path.sep, ""));
+    // check if the file is ignored by any of the ignore patterns
+    const included = config.includedMatcher(filename);
     if (!included) {
       // figure out which ignore pattern is causing the file to be ignored for a better error message
       for (const ignoreGlob of config.ignore) {
-        const withThisIgnore = await globby(config.includeGlob, {
-          cwd: root,
-          absolute: true,
-          ignore: [ignoreGlob],
-        });
-        if (!withThisIgnore.includes(filename)) {
+        if (micromatch.isMatch(filename, ignoreGlob)) {
           return ignoreGlob;
         }
       }

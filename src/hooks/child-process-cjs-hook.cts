@@ -39,7 +39,7 @@ if (!workerData || !(workerData as SyncWorkerData).isWDSSyncWorker) {
   };
 
   // Register our compiler for typescript files.
-  // We don't do the best practice of chaining module._compile calls because esbuild won't know about any of the stuff any of the other extensions might do, so running them wouldn't do anything. wds must then be the first registered extension.
+  // We don't do the best practice of chaining module._compile calls because swc won't know about any of the stuff any of the other extensions might do, so running them wouldn't do anything. wds must then be the first registered extension.
   const extensions = process.env["WDS_EXTENSIONS"]!.split(",");
   log.debug("registering cjs hook for extensions", extensions);
   for (const extension of extensions) {
