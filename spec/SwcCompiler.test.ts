@@ -25,6 +25,11 @@ test("compiles simple files", async () => {
   expect(content).toContain('console.log("success")');
 });
 
+test("compiles files in directories named .well-known", async () => {
+  const content = await compile("./.well-known/run.ts");
+  expect(content).toContain('console.log(_foo.foo)');
+});
+
 test("throws if the compilation fails", async () => {
   await expect(compile("./failing/failing.ts", "fixtures/failing")).rejects.toThrow(MissingDestinationError);
 });
