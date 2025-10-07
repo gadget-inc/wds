@@ -198,6 +198,7 @@ export class SwcCompiler implements Compiler {
     let fileNames = await globby(config.includeGlob, {
       onlyFiles: true,
       cwd: root,
+      dot: true,
       absolute: true,
       ignore: ignores,
     });
