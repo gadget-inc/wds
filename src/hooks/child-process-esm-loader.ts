@@ -77,12 +77,7 @@ export const resolve: ResolveHook = async function resolve(specifier, context, n
   const resolved = await esmResolver.async(parentURL, specifier.startsWith("file:") ? fileURLToPath(specifier) : specifier);
   debugLog?.("oxc resolver result", { specifier, parentURL, resolved });
 
-  if (resolved.error) {
-    debugLog?.("esm custom resolver error", { specifier, parentURL, resolved, error: resolved.error });
-    throw new Error(`${resolved.error}: ${specifier} cannot be resolved in ${context.parentURL}`);
-  }
-
-  if (resolved.path) {
+  if (!resolved.error && resolved.path) {
     // we were able to resolve with our custom resolver
     const targetPath = resolved.path;
 
@@ -97,6 +92,8 @@ export const resolve: ResolveHook = async function resolve(specifier, context, n
         shortCircuit: true,
       };
     }
+  } else if (resolved.error) {
+    debugLog?.("oxc resolver failed, will try node fallback", { specifier, parentURL, error: resolved.error });
   }
 
   // we weren't able to resolve with our custom resolver, fallback to node's default resolver
